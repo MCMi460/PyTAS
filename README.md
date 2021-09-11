@@ -7,7 +7,7 @@ To use it, simply type your code in the `main()` function and run [script.py](/s
 ## Syntax
 There are two native functions for inputs: `input()` and `wait()`. All inputs performed in `main()` will be used, so it's best to write your scripts in the `main()` function.  
 `input()` requires 6 positional arguments, FRAME, KEYS, STICK1_X, STICK1_Y, STICK2_X, and STICK2_Y.  
-FRAME is the number of frames since the previous frame. This value cannot be a negative integer or a decimal.  
+FRAME is the number of frames since ***the previous frame\****. This value cannot be a negative integer or a decimal.  
 KEYS is a list variable that contains a list of strings each of the [available buttons](#buttons).  
 STICK1_X is an integer variable for the horizontal left stick usage. It must be an integer between -32767 and 32767. It cannot be a decimal.  
 STICK1_Y is the same as the above, but for vertical left stick usage.  
@@ -16,6 +16,8 @@ STICK2_Y is the same as the above, but for vertical right stick usage.
 
 `wait()` is a function that increments the current frame number. It requires one positional argument: FRAME.  
 FRAME is an integer and cannot be negative or a decimal point.
+
+*\*It's important to note that FRAME is the number of frames since the previous frame as it is how functions work properly.*
 
 <h3 id="buttons">Available buttons</h3>
 KEY_A, KEY_B, KEY_X, KEY_Y, KEY_LSTICK, KEY_RSTICK, KEY_L, KEY_R, KEY_ZL, KEY_ZR, KEY_PLUS, KEY_MINUS, KEY_DLEFT, KEY_DUP, KEY_DRIGHT, KEY_DDOWN
