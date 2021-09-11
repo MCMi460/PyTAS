@@ -2,6 +2,8 @@
 ## Features
 PyTAS is a Python implementation of [nx-TAS](https://github.com/hamhub7/tas-script/blob/master/lua/lib/nxtas.md) by [hamhub7](https://github.com/hamhub7) intended to make shortcuts easier than before.
 
+To use it, simply type your code in the `main()` function and run [script.py](/script.py).
+
 ## Syntax
 There are two native functions for inputs: `input()` and `wait()`. All inputs performed in `main()` will be used, so it's best to write your scripts in the `main()` function.  
 `input()` requires 6 positional arguments, FRAME, KEYS, STICK1_X, STICK1_Y, STICK2_X, and STICK2_Y.  
