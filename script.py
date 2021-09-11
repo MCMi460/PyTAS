@@ -56,6 +56,7 @@ def main():
 import os
 
 keys = (
+'NONE',
 'KEY_A',
 'KEY_B',
 'KEY_X',
