@@ -3,21 +3,49 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import time
 import threading
+from utility import *
 
-defaultTextBuffer = "def main():\n   input(0,('KEY_A',),0,0,0,0)\n   "
+defaultTextBuffer = """def roll_cancel():
+    script.input(0,('KEY_B',),0,0,0,0)
+    script.input(5,('KEY_ZL',),0,0,0,0)
+    script.input(35,('KEY_ZL','KEY_Y',),0,0,0,0)
+    script.input(2,('KEY_X','KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+
+# Put your inputs here!
+def main():
+    for i in range(5):
+        roll_cancel()
+        script.wait(60)
+    # All Python syntax should work!
+"""
+scriptRunBuffer = """from main import script
+script = script()
+script.run(main)"""
 class Window(QMainWindow):
     def __init__(self,app):
         self.app = app
         super(Window, self).__init__()
         self.setWindowTitle('PyTAS Editor')
-        self.dark = False
+        self.dark = True
         self.screen_size = self.get_screen()[1]
-        self.text_buffer = defaultTextBuffer
+        self.setup_files()
         self.setFixedSize(int(self.screen_size.width()), int(self.screen_size.height()))
         self.move(0,0)
         self.create_menu()
         self.create_layout()
         self.show()
+
+    def setup_files(self):
+        self.text_buffer = defaultTextBuffer
+        self.file = File('../script.py')
+        self.file.set_buffer()
+        self.text_buffer = self.file.read_buffer()
+        self.text_buffer = self.text_buffer.replace(scriptRunBuffer,'')
+        self.text_buffer = self.text_buffer.rstrip('\n')
 
     def create_layout(self):
         if self.dark:
@@ -59,7 +87,11 @@ class Window(QMainWindow):
         exit.setShortcut('Ctrl+Q')
         exit.triggered.connect(self.exit)
 
-        toggle = QAction('&Toggle Dark Mode', self)
+        openFile = QAction('&Open File', self)
+        openFile.setShortcut('Ctrl+O')
+        openFile.triggered.connect(self.openCurrentFile)
+
+        toggle = QAction('&Toggle Light Mode', self)
         toggle.setShortcut('Ctrl+D')
         toggle.triggered.connect(self.toggle_view)
 
@@ -75,6 +107,7 @@ class Window(QMainWindow):
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
         fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(openFile)
         fileMenu.addAction(exit)
         editMenu = menubar.addMenu('&Edit')
         viewMenu = menubar.addMenu('&View')
@@ -95,6 +128,8 @@ class Window(QMainWindow):
         self.tabs.setCurrentIndex(0)
     def switch_tab2(self):
         self.tabs.setCurrentIndex(1)
+    def openCurrentFile(self):
+        open_folder(self.file.file)
     def exit(self):
         sys.exit("Closed app")
 
