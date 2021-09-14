@@ -3,10 +3,10 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import time
 import threading
-from utility import *
+from core.utility import *
 
 defaultTextBuffer = """def roll_cancel():
-    script.input(0,('KEY_B',),0,0,0,0)
+    script.input(1,('KEY_B',),0,0,0,0)
     script.input(5,('KEY_ZL',),0,0,0,0)
     script.input(35,('KEY_ZL','KEY_Y',),0,0,0,0)
     script.input(2,('KEY_X','KEY_A',),30000,0,0,0)
@@ -22,7 +22,7 @@ def main():
         script.wait(60)
     # All Python syntax should work!
 """
-scriptRunBuffer = """from main import script
+scriptRunBuffer = """from core.main import script
 script = script()
 script.run(main)"""
 class Window(QMainWindow):
@@ -41,11 +41,21 @@ class Window(QMainWindow):
 
     def setup_files(self):
         self.text_buffer = defaultTextBuffer
-        self.file = File('../script.py')
-        self.file.set_buffer()
-        self.text_buffer = self.file.read_buffer()
-        self.text_buffer = self.text_buffer.replace(scriptRunBuffer,'')
-        self.text_buffer = self.text_buffer.rstrip('\n')
+        self.file_path = './script.py'
+        try:
+            self.file = File(self.file_path)
+            self.file.set_buffer()
+            self.text_buffer = self.file.read_buffer()
+            self.text_buffer = self.text_buffer.replace(scriptRunBuffer,'')
+            self.text_buffer = self.text_buffer.rstrip('\n')
+        except Exception as e:
+            error = QMessageBox()
+            error.setText("A fatal error occured when opening your file.")
+            error.setInformativeText(f"Try checking {self.file_path}'s directory for errors.")
+            error.setWindowTitle("Error!")
+            error.setDetailedText(f"{e}")
+            error.exec_()
+            self.file_path = None
 
     def create_layout(self):
         if self.dark:
@@ -87,9 +97,13 @@ class Window(QMainWindow):
         exit.setShortcut('Ctrl+Q')
         exit.triggered.connect(self.exit)
 
-        openFile = QAction('&Open File', self)
-        openFile.setShortcut('Ctrl+O')
-        openFile.triggered.connect(self.openCurrentFile)
+        runFile = QAction('&Run Script', self)
+        runFile.setShortcut('F5')
+        runFile.triggered.connect(self.runFile)
+
+        saveFile = QAction('&Save File', self)
+        saveFile.setShortcut('Ctrl+S')
+        saveFile.triggered.connect(self.askSave)
 
         toggle = QAction('&Toggle Light Mode', self)
         toggle.setShortcut('Ctrl+D')
@@ -107,7 +121,8 @@ class Window(QMainWindow):
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
         fileMenu = menubar.addMenu('&File')
-        fileMenu.addAction(openFile)
+        fileMenu.addAction(runFile)
+        fileMenu.addAction(saveFile)
         fileMenu.addAction(exit)
         editMenu = menubar.addMenu('&Edit')
         viewMenu = menubar.addMenu('&View')
@@ -130,6 +145,37 @@ class Window(QMainWindow):
         self.tabs.setCurrentIndex(1)
     def openCurrentFile(self):
         open_folder(self.file.file)
+    def runFile(self):
+        if self.text_buffer != self.file.read_buffer():
+            if not self.askSave():
+                return
+        try:
+            exec(self.file.read_buffer())
+        except Exception as e:
+            error = QMessageBox()
+
+            error.setText("A fatal error occured when running your script.")
+            error.setInformativeText(f"Try running {self.file_path} as a standalone file.")
+            error.setWindowTitle("Error!")
+            error.setDetailedText(f"{e}")
+            error.exec_()
+            return
+        try:
+            open_folder('./output')
+        except:
+            pass
+    def askSave(self):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Save file")
+        dlg.setText("Would you like to save your current progress?")
+        dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        ans = dlg.exec()
+        if ans == QMessageBox.Yes:
+            self.file.write(self.text_buffer+'\n'+scriptRunBuffer)
+            self.file.set_buffer()
+            return True
+        else:
+            return False
     def exit(self):
         sys.exit("Closed app")
 

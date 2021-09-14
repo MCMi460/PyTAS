@@ -23,7 +23,7 @@ def open_folder(str = ".",OS = platform):
     elif OS.startswith("win"):
         str = f"start {str}"
     else:
-        raise Exception("Unknown platform.")
+        str = f"./{str}"
     os.system(str)
 
 class File():
