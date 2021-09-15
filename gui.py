@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 import time
 import threading
 from core.utility import *
@@ -25,6 +26,24 @@ def main():
 scriptRunBuffer = """from core.main import script
 script = script()
 script.run(main)"""
+keys = (
+'KEY_A',
+'KEY_B',
+'KEY_X',
+'KEY_Y',
+'KEY_LSTICK',
+'KEY_RSTICK',
+'KEY_L',
+'KEY_R',
+'KEY_ZL',
+'KEY_ZR',
+'KEY_PLUS',
+'KEY_MINUS',
+'KEY_DLEFT',
+'KEY_DUP',
+'KEY_DRIGHT',
+'KEY_DDOWN',
+)
 class Window(QMainWindow):
     def __init__(self,app):
         self.app = app
@@ -36,7 +55,9 @@ class Window(QMainWindow):
         self.setFixedSize(int(self.screen_size.width()), int(self.screen_size.height()))
         self.move(0,0)
         self.create_menu()
+        self.row_count = 4
         self.create_layout()
+        self.tabIndex = 0
         self.show()
 
     def setup_files(self):
@@ -73,11 +94,46 @@ class Window(QMainWindow):
         self.tabs.addTab(Functions,"Programmatic")
 
         Editor.layout = QVBoxLayout()
-        pushButton1 = QPushButton("Useless button... for NOW")
+        pushButton1 = QPushButton("Add Frame")
+        pushButton1.clicked.connect(self.add_row)
         pushButton1.setStyleSheet("background-color: #c7c5c6;")
         if self.dark:
             pushButton1.setStyleSheet("background-color: #171616; color: #ffffff;")
         Editor.layout.addWidget(pushButton1)
+
+        self.table = QTableWidget()
+
+        self.table.setRowCount(self.row_count)
+        self.table.setColumnCount(18)
+
+        self.table.setItem(0,0, QTableWidgetItem("Frame"))
+        self.table.setItem(0,17, QTableWidgetItem("Delete"))
+        for i in range(len(keys)):
+            self.table.setItem(0,i + 1, QTableWidgetItem(keys[i]))
+        for i in range(1,self.row_count):
+            self.table.setItem(i,0, QTableWidgetItem(str(i - 1)))
+        for i in range(1,17):
+            for n in range(1,self.row_count):
+                item = QTableWidgetItem()
+                item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                item.setCheckState(Qt.Unchecked)
+                self.table.setItem(n, i, item)
+        for n in range(1,self.row_count):
+            self.table.setItem(n,17, QTableWidgetItem("Delete"))
+
+        vertHeader = self.table.verticalHeader()
+        vertHeader.setVisible(False)
+
+        header = self.table.horizontalHeader()
+        header.setVisible(False)
+        header.setDefaultAlignment(Qt.AlignCenter)
+        #header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.Stretch)
+
+        self.table.clicked.connect(self.table_clicked)
+        Editor.layout.addWidget(self.table)
+
+        # Set editor layout. Don't screw with this one, Mi460
         Editor.setLayout(Editor.layout)
 
         Functions.layout = QVBoxLayout()
@@ -136,9 +192,24 @@ class Window(QMainWindow):
         if self.code_input.toPlainText() == defaultTextBuffer:
             return
         self.text_buffer = self.code_input.toPlainText()
+    def table_clicked(self, item):
+        if item.column() == 17 and item.row() != 0:
+            self.table.removeRow(item.row())
+    def add_row(self):
+        pos = self.table.rowCount()
+        self.table.insertRow(pos)
+        self.table.setItem(pos,18, QTableWidgetItem("Delete"))
+        for i in range(1,17):
+            item = QTableWidgetItem()
+            item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            item.setCheckState(Qt.Unchecked)
+            self.table.setItem(pos, i, item)
+        self.table.setItem(pos,17, QTableWidgetItem("Delete"))
     def toggle_view(self):
         self.dark = not self.dark
+        self.tabIndex = self.tabs.currentIndex()
         self.create_layout()
+        self.tabs.setCurrentIndex(self.tabIndex)
     def switch_tab1(self):
         self.tabs.setCurrentIndex(0)
     def switch_tab2(self):
@@ -150,7 +221,7 @@ class Window(QMainWindow):
             if not self.askSave():
                 return
         try:
-            exec(self.file.read_buffer())
+            raise Exception("This feature is currently broken.\nPlease run the script separately for the time being.")
         except Exception as e:
             error = QMessageBox()
 
