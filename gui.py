@@ -184,14 +184,21 @@ class Window(QMainWindow):
         self.text_buffer = self.code_input.toPlainText()
     def set_tableheaderLayout(self):
         self.table.setRowCount(self.row_count)
-        self.table.setItem(0,0, QTableWidgetItem("Frame"))
+        item = QTableWidgetItem("Frame")
+        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        self.table.setItem(0,0, item)
 
         for i in range(len(self.frame_data)):
-            self.table.setItem(i+1,0, QTableWidgetItem(str(self.frame_data[i])))
+            item = QTableWidgetItem(str(self.frame_data[i]))
+            self.table.setItem(i+1,0, item)
 
-        self.table.setItem(0,17, QTableWidgetItem("Delete"))
+        item = QTableWidgetItem("<>")
+        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        self.table.setItem(0,17, item)
         for i in range(len(keys)):
-            self.table.setItem(0,i + 1, QTableWidgetItem(keys[i]))
+            item = QTableWidgetItem(keys[i])
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.table.setItem(0,i + 1, item)
         for i in range(1,17):
             for n in range(1,self.row_count):
                 item = QTableWidgetItem()
@@ -222,7 +229,6 @@ class Window(QMainWindow):
             self.frame_data.append(data[i].split(' ')[0])
             _k = data[i].split(' ')[1].split(';')
             self.key_data.append(_k)
-            #self.key_data.append()
         self.set_tableheaderLayout()
     def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
