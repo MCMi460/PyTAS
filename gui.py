@@ -56,7 +56,9 @@ class Window(QMainWindow):
         self.setFixedSize(int(self.screen_size.width()), int(self.screen_size.height()))
         self.move(0,0)
         self.create_menu()
-        self.row_count = 4
+        self.row_count = 1
+        self.key_data = []
+        self.frame_data = []
         self.create_layout()
         self.tabIndex = 0
         self.loadTableFromBuffer()
@@ -105,7 +107,6 @@ class Window(QMainWindow):
 
         self.table = QTableWidget()
 
-        self.table.setRowCount(self.row_count)
         self.table.setColumnCount(18)
 
         self.set_tableheaderLayout()
@@ -182,7 +183,12 @@ class Window(QMainWindow):
             return
         self.text_buffer = self.code_input.toPlainText()
     def set_tableheaderLayout(self):
+        self.table.setRowCount(self.row_count)
         self.table.setItem(0,0, QTableWidgetItem("Frame"))
+
+        for i in range(len(self.frame_data)):
+            self.table.setItem(i+1,0, QTableWidgetItem(str(self.frame_data[i])))
+
         self.table.setItem(0,17, QTableWidgetItem("Delete"))
         for i in range(len(keys)):
             self.table.setItem(0,i + 1, QTableWidgetItem(keys[i]))
@@ -190,31 +196,49 @@ class Window(QMainWindow):
             for n in range(1,self.row_count):
                 item = QTableWidgetItem()
                 item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-                item.setCheckState(Qt.Unchecked)
+                if self.key_data == []:
+                    item.setCheckState(Qt.Unchecked)
+                else:
+                    try:
+                        if keys[i - 1] in self.key_data[n - 1]:
+                            item.setCheckState(Qt.Checked)
+                        else:
+                            raise Exception()
+                    except:
+                        item.setCheckState(Qt.Unchecked)
                 self.table.setItem(n, i, item)
         for n in range(1,self.row_count):
             self.table.setItem(n,17, QTableWidgetItem("Delete"))
     def loadTableFromBuffer(self):
         self.set_tableheaderLayout()
-
         exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), globals(), None)
-        data = script.run(main,True)
-        
-    def table_clicked(self, item):
+        data = script.run(main,True).split('\n')
+        data.remove('')
+        self.row_count = len(data) + 1
+        self.frame_data = []
+        for i in range(len(data)):
+            if data[i] == '':
+                continue
+            self.frame_data.append(data[i].split(' ')[0])
+            _k = data[i].split(' ')[1].split(';')
+            self.key_data.append(_k)
+            #self.key_data.append()
         self.set_tableheaderLayout()
+    def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
             self.table.removeRow(item.row())
-    def add_row(self):
+            self.row_count -= 1
+        self.key_data = []
+        for i in range(1,self.table.rowCount()):
+            _k = []
+            for n in range(1,17):
+                if self.table.item(i,n).checkState() == Qt.Checked:
+                    _k.append(keys[n - 1])
+            self.key_data.append(_k)
         self.set_tableheaderLayout()
-        pos = self.table.rowCount()
-        self.table.insertRow(pos)
-        self.table.setItem(pos,18, QTableWidgetItem("Delete"))
-        for i in range(1,17):
-            item = QTableWidgetItem()
-            item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-            item.setCheckState(Qt.Unchecked)
-            self.table.setItem(pos, i, item)
-        self.table.setItem(pos,17, QTableWidgetItem("Delete"))
+    def add_row(self):
+        self.row_count += 1
+        self.set_tableheaderLayout()
     def toggle_view(self):
         self.dark = not self.dark
         self.tabIndex = self.tabs.currentIndex()
