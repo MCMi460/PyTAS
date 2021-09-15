@@ -63,13 +63,16 @@ class script():
             text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']}\n"
         return text
 
-    def run(self,MAIN):
+    def run(self,MAIN,re=False):
         try:
             MAIN()
             if not os.path.isdir(self.path):
                 os.mkdir(self.path)
+            data = self.justify(self.input_arr)
+            if re:
+                return data
             with open(f'{self.path}/script1.txt','w') as file:
-                file.write(self.justify(self.input_arr))
+                file.write(data)
         except Exception as e:
             print('A fatal error occurred. Please review the error message.')
             print(e)

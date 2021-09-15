@@ -44,6 +44,7 @@ keys = (
 'KEY_DRIGHT',
 'KEY_DDOWN',
 )
+defaultInputBuffer = """script.input(1,('NONE',),0,0,0,0)"""
 class Window(QMainWindow):
     def __init__(self,app):
         self.app = app
@@ -58,6 +59,7 @@ class Window(QMainWindow):
         self.row_count = 4
         self.create_layout()
         self.tabIndex = 0
+        self.loadTableFromBuffer()
         self.show()
 
     def setup_files(self):
@@ -106,20 +108,7 @@ class Window(QMainWindow):
         self.table.setRowCount(self.row_count)
         self.table.setColumnCount(18)
 
-        self.table.setItem(0,0, QTableWidgetItem("Frame"))
-        self.table.setItem(0,17, QTableWidgetItem("Delete"))
-        for i in range(len(keys)):
-            self.table.setItem(0,i + 1, QTableWidgetItem(keys[i]))
-        for i in range(1,self.row_count):
-            self.table.setItem(i,0, QTableWidgetItem(str(i - 1)))
-        for i in range(1,17):
-            for n in range(1,self.row_count):
-                item = QTableWidgetItem()
-                item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-                item.setCheckState(Qt.Unchecked)
-                self.table.setItem(n, i, item)
-        for n in range(1,self.row_count):
-            self.table.setItem(n,17, QTableWidgetItem("Delete"))
+        self.set_tableheaderLayout()
 
         vertHeader = self.table.verticalHeader()
         vertHeader.setVisible(False)
@@ -192,10 +181,31 @@ class Window(QMainWindow):
         if self.code_input.toPlainText() == defaultTextBuffer:
             return
         self.text_buffer = self.code_input.toPlainText()
+    def set_tableheaderLayout(self):
+        self.table.setItem(0,0, QTableWidgetItem("Frame"))
+        self.table.setItem(0,17, QTableWidgetItem("Delete"))
+        for i in range(len(keys)):
+            self.table.setItem(0,i + 1, QTableWidgetItem(keys[i]))
+        for i in range(1,17):
+            for n in range(1,self.row_count):
+                item = QTableWidgetItem()
+                item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                item.setCheckState(Qt.Unchecked)
+                self.table.setItem(n, i, item)
+        for n in range(1,self.row_count):
+            self.table.setItem(n,17, QTableWidgetItem("Delete"))
+    def loadTableFromBuffer(self):
+        self.set_tableheaderLayout()
+
+        exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), globals(), None)
+        data = script.run(main,True)
+        
     def table_clicked(self, item):
+        self.set_tableheaderLayout()
         if item.column() == 17 and item.row() != 0:
             self.table.removeRow(item.row())
     def add_row(self):
+        self.set_tableheaderLayout()
         pos = self.table.rowCount()
         self.table.insertRow(pos)
         self.table.setItem(pos,18, QTableWidgetItem("Delete"))
@@ -221,7 +231,8 @@ class Window(QMainWindow):
             if not self.askSave():
                 return
         try:
-            raise Exception("This feature is currently broken.\nPlease run the script separately for the time being.")
+            exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), globals(), None)
+            script.run(main)
         except Exception as e:
             error = QMessageBox()
 
