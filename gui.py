@@ -226,8 +226,7 @@ class Window(QMainWindow):
         self.set_tableheaderLayout()
     def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
-            self.table.removeRow(item.row())
-            self.row_count -= 1
+            self.remove_row(item.row())
         self.key_data = []
         for i in range(1,self.table.rowCount()):
             _k = []
@@ -239,6 +238,12 @@ class Window(QMainWindow):
     def add_row(self):
         self.row_count += 1
         self.set_tableheaderLayout()
+    def remove_row(self,row):
+        row -= 1
+        self.table.removeRow(row)
+        self.frame_data.pop(row)
+        self.key_data.pop(row)
+        self.row_count -= 1
     def toggle_view(self):
         self.dark = not self.dark
         self.tabIndex = self.tabs.currentIndex()
