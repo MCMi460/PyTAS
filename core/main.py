@@ -2,7 +2,7 @@ import os
 import inspect
 
 class script():
-    def __init__(self):
+    def __init__(self,time:bool=False):
         self.keys = (
         'NONE',
         'KEY_A',
@@ -25,6 +25,10 @@ class script():
         self.input_arr = []
         self.curr_frame = 0
         self.path = './output'
+        self.timer = time
+        if time:
+            from .utility import Timer
+            self.timer = Timer()
 
     def input(self,FRAME:int,KEYS:list,STICK1_X:int,STICK1_Y:int,STICK2_X:int,STICK2_Y:int):
         if FRAME < 0:
@@ -73,6 +77,9 @@ class script():
         return text
 
     def run(self,MAIN,re=False):
+        if self.timer:
+            self.timer.start()
+            print('Started timer!')
         try:
             MAIN()
             if not os.path.isdir(self.path):
@@ -84,3 +91,5 @@ class script():
         except Exception as e:
             print('A fatal error occurred. Please review the error message.')
             print(e)
+        if self.timer:
+            print(f'Finished time in {self.timer.get()} seconds.')

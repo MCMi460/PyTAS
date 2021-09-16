@@ -14,6 +14,7 @@ def main():
         roll_cancel()
         script.wait(60)
     # All Python syntax should work!
+
 from core.main import script
 script = script()
 script.run(main)
