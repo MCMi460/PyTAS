@@ -10,6 +10,7 @@ def roll_cancel():
 
 # Put your inputs here!
 def main():
+    script.input(1,('KEY_B','KEY_DDOWN',),0,0,0,0)
     for i in range(5):
         roll_cancel()
         script.wait(60)

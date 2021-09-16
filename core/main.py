@@ -1,4 +1,5 @@
 import os
+import inspect
 
 class script():
     def __init__(self):
@@ -50,7 +51,9 @@ class script():
         'Key':key,
         'LeftStick':f'{STICK1_X};{STICK1_Y}',
         'RightStick':f'{STICK2_X};{STICK2_Y}',
+        'Caller':f'{inspect.stack()[1][3]}',
         })
+
 
     def wait(self,FRAME:int):
         if FRAME < 0:
@@ -63,16 +66,21 @@ class script():
             text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']}\n"
         return text
 
+    def GUIjustify(self,inputs:list):
+        text = ''
+        for i in inputs:
+            text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']} {i['Caller']}\n"
+        return text
+
     def run(self,MAIN,re=False):
         try:
             MAIN()
             if not os.path.isdir(self.path):
                 os.mkdir(self.path)
-            data = self.justify(self.input_arr)
             if re:
-                return data
+                return self.GUIjustify(self.input_arr)
             with open(f'{self.path}/script1.txt','w') as file:
-                file.write(data)
+                file.write(self.justify(self.input_arr))
         except Exception as e:
             print('A fatal error occurred. Please review the error message.')
             print(e)

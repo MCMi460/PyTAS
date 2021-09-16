@@ -59,6 +59,7 @@ class Window(QMainWindow):
         self.row_count = 1
         self.key_data = []
         self.frame_data = []
+        self.function_data = []
         self.create_layout()
         self.tabIndex = 0
         self.loadTableFromBuffer()
@@ -223,12 +224,16 @@ class Window(QMainWindow):
         data.remove('')
         self.row_count = len(data) + 1
         self.frame_data = []
+        self.key_data = []
+        self.function_data = []
         for i in range(len(data)):
             if data[i] == '':
                 continue
-            self.frame_data.append(data[i].split(' ')[0])
-            _k = data[i].split(' ')[1].split(';')
+            j = data[i].split(' ')
+            self.frame_data.append(j[0])
+            _k = j[1].split(';')
             self.key_data.append(_k)
+            self.function_data.append(j[4])
         self.set_tableheaderLayout()
     def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
@@ -246,9 +251,18 @@ class Window(QMainWindow):
         self.set_tableheaderLayout()
     def remove_row(self,row):
         row -= 1
+        if self.function_data[row] != 'main':
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle("Remove function")
+            dlg.setText("Would you like to remove this function?")
+            dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            ans = dlg.exec()
+            if ans != QMessageBox.Yes:
+                return
         self.table.removeRow(row)
         self.frame_data.pop(row)
         self.key_data.pop(row)
+        self.function_data.pop(row)
         self.row_count -= 1
     def toggle_view(self):
         self.dark = not self.dark
