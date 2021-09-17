@@ -102,11 +102,17 @@ class Window(QMainWindow):
 
         Editor.layout = QVBoxLayout()
         pushButton1 = QPushButton("Add Frame")
-        pushButton1.clicked.connect(self.add_row)
+        pushButton1.clicked.connect(self.add_frame)
         pushButton1.setStyleSheet("background-color: #c7c5c6;")
         if self.dark:
             pushButton1.setStyleSheet("background-color: #171616; color: #ffffff;")
         Editor.layout.addWidget(pushButton1)
+        pushButton2 = QPushButton("Add Function")
+        pushButton2.clicked.connect(self.add_fn)
+        pushButton2.setStyleSheet("background-color: #c7c5c6;")
+        if self.dark:
+            pushButton2.setStyleSheet("background-color: #171616; color: #ffffff;")
+        Editor.layout.addWidget(pushButton2)
 
         self.table = QTableWidget()
 
@@ -196,18 +202,19 @@ class Window(QMainWindow):
         for i in range(len(self.frame_data)):
             in_function = False
             for n in self.function_frames:
-                if n['start'] <= self.frame_data[i] <= n['end']:
+                if n['start'] <= self.frame_data[i][0] <= n['end']:
                     in_function = n
             if not in_function:
                 item = QSpinBox()
-                item.setValue(self.frame_data[i])
+                item.setValue(self.frame_data[i][0])
                 item.setMinimum(0)
                 item.setMaximum(999999)
                 self.table.setCellWidget(i+1,0, item)
                 j += 1
             else:
-                if in_function['end'] == self.frame_data[i]:
-                    item = QTableWidgetItem('test')
+                if in_function['end'] == self.frame_data[i][0]:
+                    item = QTableWidgetItem(in_function['function'])
+                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                     self.table.setItem(j+1,0, item)
                     j += 1
 
@@ -280,31 +287,37 @@ class Window(QMainWindow):
                             })
                             in_function = None
                             self.row_count += 1
-            if not got:#to mi460, when you get back, make sure to change how the table displays
-            #functions, also make sure that main functions still add rows and act as proper inputs.
-            #thanks
+            if not got:
                 self.row_count += 1
-            self.frame_data.append(j[0])
             _k = j[1].split(';')
-            self.key_data.append(_k)
+            self.frame_data.append([j[0],j[4],_k])
         self.set_tableheaderLayout()
     def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
             self.remove_row(item.row())
-        self.key_data = []
-        for i in range(1,self.table.rowCount()):
-            _k = []
-            for n in range(1,17):
-                if self.table.item(i,n).checkState() == Qt.Checked:
-                    _k.append(keys[n - 1])
-            self.key_data.append(_k)
         self.set_tableheaderLayout()
-    def add_row(self):
+    def add_frame(self):
+        self.row_count += 1
+        self.set_tableheaderLayout()
+    def add_fn(self):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Add function")
+        dlg.setText("Which function would you like to add?")
+        combo = QComboBox()
+        list = []
+        for i in self.function_data:
+            list.append(i['function'])
+        combo.addItems(list)
+        dlg.layout().addWidget(combo)
+        dlg.setStandardButtons(QMessageBox.Cancel | QMessageBox.Ok)
+        ans = dlg.exec()
+        if ans != QMessageBox.Yes:
+            return
         self.row_count += 1
         self.set_tableheaderLayout()
     def remove_row(self,row):
         row -= 1
-        if self.function_frames[row] != 'main':
+        if self.frame_data[row][1] != 'main':
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Remove function")
             dlg.setText("Would you like to remove this function?")
@@ -312,6 +325,7 @@ class Window(QMainWindow):
             ans = dlg.exec()
             if ans != QMessageBox.Yes:
                 return
+        print(self.key_data)
         self.table.removeRow(row)
         self.frame_data.pop(row)
         self.key_data.pop(row)
