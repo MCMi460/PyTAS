@@ -57,9 +57,11 @@ class Window(QMainWindow):
         self.move(0,0)
         self.create_menu()
         self.row_count = 1
+        self.__f = {}
         self.key_data = []
         self.frame_data = []
         self.function_data = []
+        self.function_frames = []
         self.create_layout()
         self.tabIndex = 0
         self.loadTableFromBuffer()
@@ -185,13 +187,29 @@ class Window(QMainWindow):
         self.text_buffer = self.code_input.toPlainText()
     def set_tableheaderLayout(self):
         self.table.setRowCount(self.row_count)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         item = QTableWidgetItem("Frame")
         item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.table.setItem(0,0, item)
 
+        j = 0
         for i in range(len(self.frame_data)):
-            item = QTableWidgetItem(str(self.frame_data[i]))
-            self.table.setItem(i+1,0, item)
+            in_function = False
+            for n in self.function_frames:
+                if n['start'] <= self.frame_data[i] <= n['end']:
+                    in_function = n
+            if not in_function:
+                item = QSpinBox()
+                item.setValue(self.frame_data[i])
+                item.setMinimum(0)
+                item.setMaximum(999999)
+                self.table.setCellWidget(i+1,0, item)
+                j += 1
+            else:
+                if in_function['end'] == self.frame_data[i]:
+                    item = QTableWidgetItem('test')
+                    self.table.setItem(j+1,0, item)
+                    j += 1
 
         item = QTableWidgetItem("<>")
         item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
@@ -219,21 +237,56 @@ class Window(QMainWindow):
             self.table.setItem(n,17, QTableWidgetItem("Delete"))
     def loadTableFromBuffer(self):
         self.set_tableheaderLayout()
-        exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), globals(), None)
-        data = script.run(main,True).split('\n')
+        self.__f = {}
+        exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), self.__f, None)
+        data = self.__f['script'].run(self.__f['main'],True).split('\n')
         data.remove('')
-        self.row_count = len(data) + 1
+        for i in self.__f:
+            if i in ('__builtins__','script','main'):
+                continue
+            self.__f['script'].__init__()
+            fn = self.__f['script'].run(self.__f[i],True).split('\n')
+            fn.remove('')
+            f_s = int(fn[0].split(' ')[0])
+            f_f = int(fn[-1].split(' ')[0])
+            self.function_data.append({
+            'function':i,
+            'frame_start':f_s,
+            'frame_end':f_f,
+            'frame_diff':f_f-f_s,
+            })
+        self.row_count = 1
         self.frame_data = []
         self.key_data = []
-        self.function_data = []
+        self.function_frames = []
+        in_function = None
         for i in range(len(data)):
             if data[i] == '':
                 continue
             j = data[i].split(' ')
+            j[0] = int(j[0])
+            got = False
+            if j[4] != 'main':
+                for n in self.function_data:
+                    if n['function'] == j[4]:
+                        got = True
+                        if not in_function:
+                            in_function = j[0]
+                        if j[0] == in_function + n['frame_diff']:
+                            self.function_frames.append({
+                            'start':in_function,
+                            'end':j[0],
+                            'function':j[4],
+                            })
+                            in_function = None
+                            self.row_count += 1
+            if not got:#to mi460, when you get back, make sure to change how the table displays
+            #functions, also make sure that main functions still add rows and act as proper inputs.
+            #thanks
+                self.row_count += 1
             self.frame_data.append(j[0])
             _k = j[1].split(';')
             self.key_data.append(_k)
-            self.function_data.append(j[4])
         self.set_tableheaderLayout()
     def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
@@ -251,7 +304,7 @@ class Window(QMainWindow):
         self.set_tableheaderLayout()
     def remove_row(self,row):
         row -= 1
-        if self.function_data[row] != 'main':
+        if self.function_frames[row] != 'main':
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Remove function")
             dlg.setText("Would you like to remove this function?")
@@ -262,7 +315,7 @@ class Window(QMainWindow):
         self.table.removeRow(row)
         self.frame_data.pop(row)
         self.key_data.pop(row)
-        self.function_data.pop(row)
+        self.function_frames.pop(row)
         self.row_count -= 1
     def toggle_view(self):
         self.dark = not self.dark
