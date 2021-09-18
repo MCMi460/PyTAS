@@ -220,9 +220,12 @@ class Window(QMainWindow):
                 j += 1
             else:
                 if in_function['end'] == self.frame_data[i][0]:
-                    item = QTableWidgetItem(in_function['function'])
-                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                    self.table.setItem(j+1,0, item)
+                    item = QComboBox()
+                    item.addItem(in_function['function'])
+                    for i in self.function_data:
+                        if in_function['function'] != i['function']:
+                            item.addItem(i['function'])
+                    self.table.setCellWidget(j+1,0, item)
                     self.rows.append([True,item])
                     j += 1
 
@@ -360,7 +363,9 @@ class Window(QMainWindow):
         self.set_tableheaderLayout()
     def remove_row(self,row):
         row -= 1
+        fn = False
         if not isinstance(self.rows[row][1], QSpinBox):
+            fn = True
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Remove function")
             dlg.setText("Would you like to remove this function?")
@@ -368,9 +373,41 @@ class Window(QMainWindow):
             ans = dlg.exec()
             if ans != QMessageBox.Yes:
                 return
-            self.function_frames.pop(row)
         # ADD CHECK TO REMOVE PROPER FUNCTION/FRAME HERE
-        self.table.removeRow(row)
+        j = 0
+        frames = []
+        func_frames = []
+        for i in range(len(self.frame_data)):
+            in_function = False
+            for n in self.function_frames:
+                if n['start'] <= self.frame_data[i][0] <= n['end']:
+                    in_function = n
+                    if j == row:
+                        func_frames.append(n)
+                        frames.append(self.frame_data[i])
+            # Do the thing
+            if not in_function:
+                if j == row:
+                    frames.append(self.frame_data[i])
+                j += 1
+            else:
+                if in_function['end'] == self.frame_data[i][0]:
+                    j += 1
+
+        # Remove data values
+        for i in frames:
+            try:
+                self.frame_data.remove(i)
+            except:
+                pass
+        for i in func_frames:
+            try:
+                self.function_frames.remove(i)
+            except:
+                pass
+
+        # Remove actual row lol
+        self.table.removeRow(row+1)
         self.row_count -= 1
     def toggle_view(self):
         self.dark = not self.dark
