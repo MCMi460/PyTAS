@@ -57,6 +57,7 @@ class Window(QMainWindow):
         self.move(0,0)
         self.create_menu()
         self.row_count = 1
+        self.rows = []
         self.__f = {}
         self.key_data = []
         self.frame_data = []
@@ -101,24 +102,23 @@ class Window(QMainWindow):
         self.tabs.addTab(Functions,"Programmatic")
 
         Editor.layout = QVBoxLayout()
+        self.combo = QComboBox()
+        self.combo.addItem('main')
+        self.combo.setStyleSheet("background-color: #c7c5c6;")
+        if self.dark:
+            self.combo.setStyleSheet("background-color: #2b2929; color: #ffffff;")
+        Editor.layout.addWidget(self.combo)
+
         pushButton1 = QPushButton("Add Frame")
         pushButton1.clicked.connect(self.add_frame)
         pushButton1.setStyleSheet("background-color: #c7c5c6;")
         if self.dark:
             pushButton1.setStyleSheet("background-color: #171616; color: #ffffff;")
         Editor.layout.addWidget(pushButton1)
-        pushButton2 = QPushButton("Add Function")
-        pushButton2.clicked.connect(self.add_fn)
-        pushButton2.setStyleSheet("background-color: #c7c5c6;")
-        if self.dark:
-            pushButton2.setStyleSheet("background-color: #171616; color: #ffffff;")
-        Editor.layout.addWidget(pushButton2)
 
         self.table = QTableWidget()
 
         self.table.setColumnCount(18)
-
-        self.set_tableheaderLayout()
 
         vertHeader = self.table.verticalHeader()
         vertHeader.setVisible(False)
@@ -146,7 +146,7 @@ class Window(QMainWindow):
         Functions.layout.addWidget(self.code_input)
         Functions.setLayout(Functions.layout)
         layout.addWidget(self.tabs)
-
+        self.set_tableheaderLayout()
     def create_menu(self):
         exit = QAction('&Exit', self)
         exit.setShortcut('Ctrl+Q')
@@ -198,6 +198,7 @@ class Window(QMainWindow):
         item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.table.setItem(0,0, item)
 
+        self.rows = []
         j = 0
         for i in range(len(self.frame_data)):
             in_function = False
@@ -206,16 +207,18 @@ class Window(QMainWindow):
                     in_function = n
             if not in_function:
                 item = QSpinBox()
-                item.setValue(self.frame_data[i][0])
                 item.setMinimum(0)
                 item.setMaximum(999999)
-                self.table.setCellWidget(i+1,0, item)
+                item.setValue(self.frame_data[i][0])
+                self.table.setCellWidget(j+1,0, item)
+                self.rows.append([False,item])
                 j += 1
             else:
                 if in_function['end'] == self.frame_data[i][0]:
                     item = QTableWidgetItem(in_function['function'])
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                     self.table.setItem(j+1,0, item)
+                    self.rows.append([True,item])
                     j += 1
 
         item = QTableWidgetItem("<>")
@@ -225,20 +228,35 @@ class Window(QMainWindow):
             item = QTableWidgetItem(keys[i])
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             self.table.setItem(0,i + 1, item)
+
         for i in range(1,17):
-            for n in range(1,self.row_count):
-                item = QTableWidgetItem()
-                item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-                if self.key_data == []:
-                    item.setCheckState(Qt.Unchecked)
+            frame = 0
+            for n in range(1,self.table.rowCount()):
+                itemZ = self.table.item(n,0)
+                if itemZ != None:
+                    if itemZ.text() != None:
+                        item = QTableWidgetItem()
+                        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                        self.table.setItem(n, i, item)
+                        continue
                 else:
                     try:
-                        if keys[i - 1] in self.key_data[n - 1]:
-                            item.setCheckState(Qt.Checked)
-                        else:
-                            raise Exception()
+                        if self.rows[n-1][1].value() != None:
+                            frame = int(self.rows[n-1][1].value())
                     except:
-                        item.setCheckState(Qt.Unchecked)
+                        continue
+                item = QTableWidgetItem()
+                item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                try:
+                    for j in range(len(self.frame_data)):
+                        if self.frame_data[j][0] == frame:
+                            if keys[i - 1] in self.frame_data[j][2]:
+                                item.setCheckState(Qt.Checked)
+                            else:
+                                raise Exception()#REMEMBER TO FIX THIS AS FRAME DATA CONTAINS FUNCTIONS THAT ARE NOT ON THE TABLE ROWS
+                                # Dw m8, I fixed it
+                except:
+                    item.setCheckState(Qt.Unchecked)
                 self.table.setItem(n, i, item)
         for n in range(1,self.row_count):
             self.table.setItem(n,17, QTableWidgetItem("Delete"))
@@ -248,6 +266,7 @@ class Window(QMainWindow):
         exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), self.__f, None)
         data = self.__f['script'].run(self.__f['main'],True).split('\n')
         data.remove('')
+        self.function_data = []
         for i in self.__f:
             if i in ('__builtins__','script','main'):
                 continue
@@ -291,13 +310,32 @@ class Window(QMainWindow):
                 self.row_count += 1
             _k = j[1].split(';')
             self.frame_data.append([j[0],j[4],_k])
+
+        self.combo.clear()
+        self.combo.addItem('main')
+        for i in self.function_data:
+            self.combo.addItem(i['function'])
+        self.combo.addItem('+ Add Function')
         self.set_tableheaderLayout()
     def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
             self.remove_row(item.row())
+        self.key_data = []
+        for i in range(1,self.table.rowCount()):
+            try:
+                print(int(self.table.item(i,0).text()))
+            except:
+                pass
+            continue
+            _k = []
+            for n in range(1,17):
+                if self.table.item(i,n).checkState() == Qt.Checked:
+                    _k.append(keys[n - 1])
+            self.key_data.append(_k)
         self.set_tableheaderLayout()
     def add_frame(self):
         self.row_count += 1
+        self.frame_data.append([self.frame_data[-1][0] + 1, 'main', ['NONE',]])
         self.set_tableheaderLayout()
     def add_fn(self):
         dlg = QMessageBox(self)
@@ -325,16 +363,16 @@ class Window(QMainWindow):
             ans = dlg.exec()
             if ans != QMessageBox.Yes:
                 return
+            self.function_frames.pop(row)
         print(self.key_data)
         self.table.removeRow(row)
         self.frame_data.pop(row)
-        self.key_data.pop(row)
-        self.function_frames.pop(row)
         self.row_count -= 1
     def toggle_view(self):
         self.dark = not self.dark
         self.tabIndex = self.tabs.currentIndex()
         self.create_layout()
+        self.loadTableFromBuffer()
         self.tabs.setCurrentIndex(self.tabIndex)
     def switch_tab1(self):
         self.tabs.setCurrentIndex(0)
