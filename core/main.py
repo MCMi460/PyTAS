@@ -30,10 +30,14 @@ class script():
             from .utility import Timer
             self.timer = Timer()
 
-    def input(self,FRAME:int,KEYS:list,STICK1_X:int,STICK1_Y:int,STICK2_X:int,STICK2_Y:int):
+    def input(self,FRAME:int,KEYS:tuple,STICK1_X:int,STICK1_Y:int,STICK2_X:int,STICK2_Y:int):
         if FRAME < 0:
             raise Exception(f'You can\'t have a negative frame! (frame {self.curr_frame} (Input #{len(self.input_arr) + 1}))')
         self.curr_frame += FRAME
+        if len(KEYS) < 1:
+            KEYS = list(KEYS)
+            KEYS.append('NONE')
+            KEYS = tuple(KEYS)
         key = ''
         for i in range(len(KEYS)):
             if KEYS[i] not in self.keys:
