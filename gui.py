@@ -46,13 +46,13 @@ keys = (
 )
 defaultInputBuffer = """script.input(1,('NONE',),0,0,0,0)"""
 class Window(QMainWindow):
-    def __init__(self,app):
+    def __init__(self,app,path='./script.py'):
         self.app = app
         super(Window, self).__init__()
         self.setWindowTitle('PyTAS Editor')
         self.dark = True
         self.screen_size = self.get_screen()[1]
-        self.setup_files()
+        self.setup_files(path)
         self.setFixedSize(int(self.screen_size.width()), int(self.screen_size.height()))
         self.move(0,0)
         self.create_menu()
@@ -68,9 +68,9 @@ class Window(QMainWindow):
         self.loadTableFromBuffer()
         self.show()
 
-    def setup_files(self):
+    def setup_files(self,path):
         self.text_buffer = defaultTextBuffer
-        self.file_path = './script.py'
+        self.file_path = path
         try:
             self.file = File(self.file_path)
             self.file.set_buffer()
@@ -152,6 +152,10 @@ class Window(QMainWindow):
         exit.setShortcut('Ctrl+Q')
         exit.triggered.connect(self.exit)
 
+        openFile = QAction('&Open File', self)
+        openFile.setShortcut('Ctrl+O')
+        openFile.triggered.connect(self.openFile)
+
         runFile = QAction('&Run Script', self)
         runFile.setShortcut('F5')
         runFile.triggered.connect(self.runFile)
@@ -176,6 +180,7 @@ class Window(QMainWindow):
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
         fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(openFile)
         fileMenu.addAction(runFile)
         fileMenu.addAction(saveFile)
         fileMenu.addAction(exit)
@@ -355,7 +360,7 @@ class Window(QMainWindow):
         self.set_tableheaderLayout()
     def remove_row(self,row):
         row -= 1
-        if self.frame_data[row][1] != 'main':
+        if not isinstance(self.rows[row][1], QSpinBox):
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Remove function")
             dlg.setText("Would you like to remove this function?")
@@ -364,9 +369,8 @@ class Window(QMainWindow):
             if ans != QMessageBox.Yes:
                 return
             self.function_frames.pop(row)
-        print(self.key_data)
+        # ADD CHECK TO REMOVE PROPER FUNCTION/FRAME HERE
         self.table.removeRow(row)
-        self.frame_data.pop(row)
         self.row_count -= 1
     def toggle_view(self):
         self.dark = not self.dark
@@ -407,11 +411,21 @@ class Window(QMainWindow):
         dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         ans = dlg.exec()
         if ans == QMessageBox.Yes:
-            self.file.write(self.text_buffer+'\n'+scriptRunBuffer)
+            self.file.write(self.text_buffer+'\n\n'+scriptRunBuffer+'\n')
             self.file.set_buffer()
             return True
         else:
             return False
+    def openFile(self):
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.AnyFile)
+        dlg.setNameFilters(["Python files (*.py)",])
+        dlg.selectNameFilter("Python files (*.py)",)
+
+        if dlg.exec_() == QDialog.Accepted:
+            self.askSave()
+            self.file_path = dlg.selectedFiles()[0]
+            self.__init__(self.app,self.file_path)
     def exit(self):
         sys.exit("Closed app")
 
