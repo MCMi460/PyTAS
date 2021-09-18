@@ -35,9 +35,7 @@ class script():
             raise Exception(f'You can\'t have a negative frame! (frame {self.curr_frame} (Input #{len(self.input_arr) + 1}))')
         self.curr_frame += FRAME
         if len(KEYS) < 1:
-            KEYS = list(KEYS)
-            KEYS.append('NONE')
-            KEYS = tuple(KEYS)
+            KEYS = ('NONE',)
         key = ''
         for i in range(len(KEYS)):
             if KEYS[i] not in self.keys:
