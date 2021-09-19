@@ -26,6 +26,8 @@ def main():
 scriptRunBuffer = """from core.main import script
 script = script()
 script.run(main)"""
+scriptRunBuffer_NORUN = """from core.main import script
+script = script()"""
 keys = (
 'KEY_A',
 'KEY_B',
@@ -148,7 +150,7 @@ class Window(QMainWindow):
         layout.addWidget(self.tabs)
         self.set_tableheaderLayout()
     def create_menu(self):
-        exit = QAction('&Exit', self)
+        exit = QAction('&Quit', self)
         exit.setShortcut('Ctrl+Q')
         exit.triggered.connect(self.exit)
 
@@ -271,7 +273,7 @@ class Window(QMainWindow):
     def loadTableFromBuffer(self):
         self.set_tableheaderLayout()
         self.__f = {}
-        exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), self.__f, None)
+        exec(self.text_buffer+'\n'+scriptRunBuffer_NORUN, self.__f, None)
         data = self.__f['script'].run(self.__f['main'],True).split('\n')
         data.remove('')
         self.function_data = []
@@ -426,8 +428,9 @@ class Window(QMainWindow):
             if not self.askSave():
                 return
         try:
-            exec(self.text_buffer+'\n'+scriptRunBuffer.replace('script.run(main)',''), globals(), None)
-            script.run(main)
+            self.__f = {}
+            exec(self.text_buffer+'\n'+scriptRunBuffer_NORUN, self.__f, None)
+            self.__f['script'].run(self.__f['main'])
         except Exception as e:
             error = QMessageBox()
 
@@ -451,8 +454,10 @@ class Window(QMainWindow):
             self.file.write(self.text_buffer+'\n\n'+scriptRunBuffer+'\n')
             self.file.set_buffer()
             return True
-        else:
+        elif ans == QMessageBox.No:
             return False
+        else:
+            return None
     def openFile(self):
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.AnyFile)
@@ -464,6 +469,8 @@ class Window(QMainWindow):
             self.file_path = dlg.selectedFiles()[0]
             self.__init__(self.app,self.file_path)
     def exit(self):
+        if self.askSave() is None:
+            return
         sys.exit("Closed app")
 
 if __name__ == '__main__':
