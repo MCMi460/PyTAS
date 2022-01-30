@@ -76,19 +76,13 @@ class script():
         'Key':'NONE',
         'LeftStick':'0;0',
         'RightStick':'0;0',
-        'Caller':f'{inspect.stack()[1][3]}',
+        'Caller':'wait',
         })
 
     def justify(self,inputs:list):
         text = ''
         for i in inputs:
             text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']}\n"
-        return text
-
-    def GUIjustify(self,inputs:list):
-        text = ''
-        for i in inputs:
-            text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']} {i['Caller']}\n"
         return text
 
     def run(self,MAIN,filename:str='script1',re:bool=False):
@@ -100,7 +94,7 @@ class script():
             if not os.path.isdir(self.path):
                 os.mkdir(self.path)
             if re:
-                return self.GUIjustify(self.input_arr)
+                return self.input_arr
             with open(f'{self.path}/{filename}.txt','w') as file:
                 file.write(self.justify(self.input_arr))
         except Exception as e:
