@@ -1,6 +1,8 @@
 import os
 import inspect
 
+version = 0.1
+
 class script():
     def __init__(self,time:bool=False):
         self.keys = (
@@ -89,7 +91,7 @@ class script():
             text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']} {i['Caller']}\n"
         return text
 
-    def run(self,MAIN,re=False):
+    def run(self,MAIN,filename:str='script1',re:bool=False):
         if self.timer:
             self.timer.start()
             print('Started timer!')
@@ -99,7 +101,7 @@ class script():
                 os.mkdir(self.path)
             if re:
                 return self.GUIjustify(self.input_arr)
-            with open(f'{self.path}/script1.txt','w') as file:
+            with open(f'{self.path}/{filename}.txt','w') as file:
                 file.write(self.justify(self.input_arr))
         except Exception as e:
             print('A fatal error occurred. Please review the error message.')
