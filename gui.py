@@ -5,6 +5,7 @@ from PyQt5.QtCore import *
 import time
 import threading
 from core.utility import *
+import copy
 
 defaultTextBuffer = """def roll_cancel():
     script.input(1,('KEY_B',),0,0,0,0)
@@ -217,6 +218,7 @@ class Window(QMainWindow):
                 item.setMinimum(0)
                 item.setMaximum(999999)
                 item.setValue(self.frame_data[i][0])
+                item.valueChanged.connect(self.loadBufferFromTable)
                 self.table.setCellWidget(j+1,0, item)
                 self.rows.append([False,item])
                 j += 1
@@ -285,11 +287,18 @@ class Window(QMainWindow):
             fn.remove('')
             f_s = int(fn[0].split(' ')[0])
             f_f = int(fn[-1].split(' ')[0])
+            f_full = []
+            frame = 0
+            for n in fn:
+                j = n.split(' ')
+                f_full.append([int(j[0]) - frame,j[4],j[1].split(';')])
+                frame = int(j[0])
             self.function_data.append({
             'function':i,
             'frame_start':f_s,
             'frame_end':f_f,
             'frame_diff':f_f-f_s,
+            'inputs':f_full,
             })
         self.row_count = 1
         self.frame_data = []
@@ -326,22 +335,14 @@ class Window(QMainWindow):
         for i in self.function_data:
             self.combo.addItem(i['function'])
         self.combo.addItem('+ Add Function')
+
         self.set_tableheaderLayout()
+        self.loadBufferFromTable()
     def table_clicked(self, item):
         if item.column() == 17 and item.row() != 0:
             self.remove_row(item.row())
         self.key_data = []
-        for i in range(1,self.table.rowCount()):
-            try:
-                print(int(self.table.item(i,0).text()))
-            except:
-                pass
-            continue
-            _k = []
-            for n in range(1,17):
-                if self.table.item(i,n).checkState() == Qt.Checked:
-                    _k.append(keys[n - 1])
-            self.key_data.append(_k)
+        self.loadBufferFromTable()
         self.set_tableheaderLayout()
     def add_frame(self):
         self.row_count += 1
@@ -363,10 +364,10 @@ class Window(QMainWindow):
             return
         self.row_count += 1
         self.set_tableheaderLayout()
-    def remove_row(self,row):
+    def remove_row(self,row,display=True):
         row -= 1
         fn = False
-        if not isinstance(self.rows[row][1], QSpinBox):
+        if not isinstance(self.rows[row][1], QSpinBox) and display:
             fn = True
             dlg = QMessageBox(self)
             dlg.setWindowTitle("Remove function")
@@ -410,7 +411,104 @@ class Window(QMainWindow):
 
         # Remove actual row lol
         self.table.removeRow(row+1)
+        self.rows.pop(row)
         self.row_count -= 1
+    def loadBufferFromTable(self):
+        list = []
+        # properly add new data
+        for n in self.function_data:
+            list.append(n['function'])
+        j = 0
+        frames = []
+        curr_frame = self.frame_data[-1][0]
+        for i in range(len(self.rows)):
+            dell = False
+            if self.rows[0-(j+1)][0]:
+                if self.rows[0-(j+1)][1].currentText() not in list:
+                    self.remove_row(len(self.rows)-(j+1),False)
+                    dell = True
+                for n in range(len(self.function_data)):
+                    if self.function_data[n]['function'] == self.rows[0-(j+1)][1].currentText():
+                        h = copy.deepcopy(self.function_data[n]['inputs'])
+
+                        #print("before reverse - self-function = {}",self.function_data[n]['inputs'])
+                        #print("before reverse - h = {}",h)
+
+                        h.reverse()
+
+                        #print("after reverse - self-function = {}",self.function_data[n]['inputs'])
+                        #print("after reverse - h = {}",h)
+
+                        for hi in h:
+                            print(curr_frame)
+                            curr_frame -= hi[0]
+                            hi[0] = curr_frame
+                            frames.insert(0,hi)
+            else:
+                curr_frame -= 1
+                frames.insert(0,[curr_frame,'main',['KEY_A',]])
+            if not dell:
+                j += 1
+        for i in range(len(frames)):
+            if frames[i] != self.frame_data[i]:
+                print(frames[i])
+                #print(self.frame_data[i])
+                pass
+
+        # Remember, Delta, we're calling the sort function after placing the data in the table because otherwise would mean it sorts from the previous
+        # state of the table, and we don't do that here.
+
+        #sort data
+        #self.sort()
+        # recall the loadheader to refresh the screen data
+
+
+        #done
+
+
+
+
+        #for i in range(1,self.table.rowCount()):
+            #try:
+                #print(int(self.table.item(i,0).text()))
+            #except:
+                #pass
+            #continue
+            #_k = []
+            #for n in range(1,17):
+                #if self.table.item(i,n).checkState() == Qt.Checked:
+                    #_k.append(keys[n - 1])
+            #self.key_data.append(_k)
+    def sort(self):
+        # ADD CHECK TO REMOVE PROPER FUNCTION/FRAME HERE
+        j = 0
+        for i in range(len(self.rows)):
+            j += 1
+            if self.rows[i][0]:
+                for n in self.function_data:
+                    if n['function'] == self.frame_data[j-1][1]:
+                        j += len(n['inputs']) - 1
+            else:
+                print(self.rows[i][1].value())
+        return
+
+
+
+        j = 0
+        frames = []
+        for i in range(len(self.frame_data)):
+            j += 1
+            frames.append(self.frame_data[i])
+            if len(frames) > 1:
+                if frames[-2][0] > frames[-1][0]:
+                    print('sort')
+            #for n in self.function_frames:
+                #if n['start'] <= self.frame_data[i][0] <= n['end']:
+                    #in_function = n
+                    #if j == row:
+                        #func_frames.append(n)
+                        #frames.append(self.frame_data[i])
+
     def toggle_view(self):
         self.dark = not self.dark
         self.tabIndex = self.tabs.currentIndex()

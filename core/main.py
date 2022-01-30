@@ -32,18 +32,20 @@ class script():
 
     def input(self,FRAME:int,KEYS:tuple,STICK1_X:int,STICK1_Y:int,STICK2_X:int,STICK2_Y:int):
         if FRAME < 0:
-            raise Exception(f'You can\'t have a negative frame! (frame {self.curr_frame} (Input #{len(self.input_arr) + 1}))')
+            raise Exception(f'You can\'t have a negative frame! (Frame {self.curr_frame} [Input #{len(self.input_arr) + 1}])')
+        elif FRAME == 0:
+            raise Exception(f'You can\'t have two of the same frame! (Frame {self.curr_frame} [Input #{len(self.input_arr) + 1}])')
         self.curr_frame += FRAME
         if len(KEYS) < 1:
             KEYS = ('NONE',)
         key = ''
         for i in range(len(KEYS)):
             if KEYS[i] not in self.keys:
-                raise Exception(f'Key at frame {self.curr_frame} (Input #{len(self.input_arr) + 1}) does not exist.')
+                raise Exception(f'Key at frame {self.curr_frame} [Input #{len(self.input_arr) + 1}] does not exist.')
             if i > 0:
                 key = f'{key};'
             key = f'{key}{KEYS[i]}'
-        joystick_err = f'Joystick value at frame {self.curr_frame} (Input #{len(self.input_arr) + 1}) must be between the values -32767 and 32767 and cannot be a decimal.'
+        joystick_err = f'Joystick value at frame {self.curr_frame} [Input #{len(self.input_arr) + 1}] must be between the values -32767 and 32767 and cannot be a decimal.'
         if STICK1_X > 32767 or STICK1_X < -32767 or not isinstance(STICK1_X, int):
             raise Exception(joystick_err)
         if STICK1_Y > 32767 or STICK1_Y < -32767 or not isinstance(STICK1_Y, int):
@@ -63,8 +65,17 @@ class script():
 
     def wait(self,FRAME:int):
         if FRAME < 0:
-            raise Exception(f'You can\'t have a negative frame! (frame {self.curr_frame} (Input #{len(self.input_arr) + 1}))')
+            raise Exception(f'You can\'t have a negative frame! (Frame {self.curr_frame} [Input #{len(self.input_arr) + 1}])')
+        elif FRAME == 0:
+            return
         self.curr_frame += FRAME
+        self.input_arr.append({
+        'Frame':self.curr_frame,
+        'Key':'NONE',
+        'LeftStick':'0;0',
+        'RightStick':'0;0',
+        'Caller':f'{inspect.stack()[1][3]}',
+        })
 
     def justify(self,inputs:list):
         text = ''
