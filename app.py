@@ -71,6 +71,8 @@ class GUI(Ui_MainWindow):
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             self.table.setItem(0,i + 1, item)
 
+        table.cellClicked.connect(self.tableUpdate)
+
     def create_menu(self):
         saveFile = QAction('&Save File', self.MainWindow)
         saveFile.setShortcut('Ctrl+S')
@@ -96,7 +98,7 @@ class GUI(Ui_MainWindow):
         viewMenu.addAction(tab2)
 
     def fill_text(self):
-        textEdit.textChanged.connect(self.textChanged)
+        textEdit.textChanged.connect(self.textUpdate)
         textEdit.setPlainText(buffer)
 
     def fill_table(self):
@@ -154,9 +156,11 @@ class GUI(Ui_MainWindow):
                 item.setMinimum(0)
                 item.setMaximum(999999)
                 item.setValue(i[1]['Frame'])
+                item.valueChanged.connect(self.spinUpdate)
             else:
                 item = QComboBox()
                 item.addItems([ i['name'] for i in functions ])
+                item.currentIndexChanged.connect(self.comboUpdate)
             table.setCellWidget(n, 0, item)
 
             for j in range(16):
@@ -171,11 +175,70 @@ class GUI(Ui_MainWindow):
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 table.setItem(n, j + 1, item)
 
+    def sort_table(self):
+        global table
+        # Interpret table
+        frames = []
+        for i in range(1,table.rowCount()):
+            val = table.cellWidget(i,0)
+            if isinstance(val,QSpinBox):
+                list = []
+                for n in range(1,17):
+                    if table.item(i,n).checkState() == Qt.Checked:
+                        list.append(keys[n-1])
+                key = ''
+                for i in range(len(list)):
+                    if i > 0:
+                        key = f'{key};'
+                    key = f'{key}{list[i]}'
+                if key == '':
+                    key = 'NONE'
+                frames.append([False,{
+                'Frame':f'{val.value()}',
+                'Key':f'{key}',
+                'LeftStick':'0;0',
+                'RightStick':'0;0',
+                'Caller':'main',
+                }])
+            else:
+                frames.append([True,val.currentText()])
+        # Reorganize frames list
+        ...
+        return frames
+
+    def write_table(self, frames):
+        # Interpret frames
+
+        # Write to buffer
+
+        pass
+
+    def removeRow(self, row):
+        table.removeRow(row)
+        self.row_count -= 1
+
     # Event-based functions
-    def textChanged(self):
+    def textUpdate(self):
         global buffer
         buffer = textEdit.toPlainText()
-        # Call fill_table
+        # Fill table
+        self.fill_table()
+
+    def tableUpdate(self, row, col):
+        if col == 17 and row != 0:
+            self.removeRow(row)
+        global table
+
+        # Sort table, write changes
+        self.write_table(self.sort_table())
+        # Fill table
+        self.fill_table()
+
+    def spinUpdate(self):
+        self.tableUpdate(0,0)
+
+    def comboUpdate(self):
+        self.tableUpdate(0,0)
 
     def askSave(self):
         dlg = QMessageBox()
