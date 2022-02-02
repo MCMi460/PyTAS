@@ -56,13 +56,26 @@ class GUI(Ui_MainWindow):
 
     def setup_window(self):
         # Window formatting
+        screen = app.primaryScreen()
+        size = screen.availableGeometry()
+        height = int(size.height())
+        width = int(size.width())
         self.MainWindow.setWindowTitle(f'PyTAS Editor v{version}')
+        self.MainWindow.setFixedSize(width, height)
+        self.MainWindow.showMaximized()
+        print(width,height)
 
         # Function box formatting
         functionBox.clear()
         functionBox.addItem('main')
 
+        # Tabs formatting
+        self.tabWidget.setGeometry(QRect(0, 0, width, height - 20))
+
+        self.tabWidget.currentChanged.connect(self.tabUpdate)
+
         # Table formatting
+        table.setGeometry(QRect(width / 130, height / 23, width - width / 45, height - height / 8))
         self.row_count = 1
         header = table.horizontalHeader()
         header.setDefaultAlignment(Qt.AlignCenter)
@@ -84,8 +97,11 @@ class GUI(Ui_MainWindow):
 
         table.cellClicked.connect(self.tableUpdate)
 
-        # Tabs event call
-        self.tabWidget.currentChanged.connect(self.tabUpdate)
+        # TextEdit formatting
+        textEdit.setGeometry(QRect(width / 130, width / 70, width - width / 45, height - height / 8))
+
+        # FunctionBox formatting
+        functionBox.setGeometry(QRect(0, 0, width - width / 130, height / 22))
 
     def create_menu(self):
         saveFile = QAction('&Save File', self.MainWindow)
