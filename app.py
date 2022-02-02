@@ -11,6 +11,7 @@ keys = tuple(keys)
 # Global variables for use
 # -Qt Stuff
 fileMenu = None
+editMenu = None
 viewMenu = None
 textEdit = None
 table = None
@@ -23,20 +24,30 @@ class GUI(Ui_MainWindow):
     def __init__(self,MainWindow):
         self.MainWindow = MainWindow
 
+    def notice(self):
+        notice = QMessageBox()
+
+        notice.setText('Warning!\nChanging files using the editor may result in unwanted changes in your file.\nPlease make sure you keep a backup before you save any changes.')
+        notice.setWindowTitle("Warning!")
+        notice.exec_()
+
     def selfService(self):
+        # Assign variables for use
         self.assign_variables()
 
+        # Setup GUI components
         self.setup_window()
         self.create_menu()
 
-        self.fill_text()
+        # A commonly-recurring function that pulls data from the buffer and writes it to the table
         self.fill_table()
 
-        #self.sidebar.findChild(QPushButton,'rewind_button').clicked.connect(self.rewind)
+        self.notice()
 
     def assign_variables(self):
-        global fileMenu, viewMenu
+        global fileMenu, editMenu, viewMenu
         fileMenu = self.menubar.addMenu('&File')
+        editMenu = self.menubar.addMenu('&Edit')
         viewMenu = self.menubar.addMenu('&View')
         global textEdit, table, functionBox
         textEdit = self.tabWidget.findChild(QWidget,'tab2').findChild(QTextEdit,'textEdit')
@@ -45,7 +56,7 @@ class GUI(Ui_MainWindow):
 
     def setup_window(self):
         # Window formatting
-        self.MainWindow.setWindowTitle(f'PyTAS v{version}')
+        self.MainWindow.setWindowTitle(f'PyTAS Editor v{version}')
 
         # Function box formatting
         functionBox.clear()
@@ -73,11 +84,19 @@ class GUI(Ui_MainWindow):
 
         table.cellClicked.connect(self.tableUpdate)
 
+        # Tabs event call
+        self.tabWidget.currentChanged.connect(self.tabUpdate)
+
     def create_menu(self):
         saveFile = QAction('&Save File', self.MainWindow)
         saveFile.setShortcut('Ctrl+S')
         saveFile.triggered.connect(self.askSave)
         fileMenu.addAction(saveFile)
+
+        runFile = QAction('&Run Script', self.MainWindow)
+        runFile.setShortcut('F5')
+        runFile.triggered.connect(self.runFile)
+        fileMenu.addAction(runFile)
 
         exit = QAction('&Quit', self.MainWindow)
         exit.setShortcut('Ctrl+Q')
@@ -104,6 +123,8 @@ class GUI(Ui_MainWindow):
     def fill_table(self):
         # Receive justified data of file from core.main
         global buffer, frames, functions, table, functionBox
+        if 'from core.main' not in buffer:
+            raise Exception('Invalid PyTAS file!')
         buff = buffer
         for line in buff.split('\n'):
             if '.run(' in line:
@@ -112,14 +133,15 @@ class GUI(Ui_MainWindow):
         'from core.main import script\nscript = script()'
         fileEnvironment = {}
         exec(buff, fileEnvironment, None)
-        vals = fileEnvironment['script'].run(fileEnvironment['main'],filename,True)
+        print(buff)
+        vals = fileEnvironment['script'].run(fileEnvironment['main'],output,True)
         # Begin interpreting functions
         functions = []
         for i in fileEnvironment:
             if i in ('__builtins__','script','main'):
                 continue
             fileEnvironment['script'].__init__()
-            f_vals = fileEnvironment['script'].run(fileEnvironment[i],filename,True)
+            f_vals = fileEnvironment['script'].run(fileEnvironment[i],output,True)
             functions.append({
             'name':i,
             'data':f_vals,
@@ -175,10 +197,17 @@ class GUI(Ui_MainWindow):
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 table.setItem(n, j + 1, item)
 
+            item = QTableWidgetItem("X")
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.table.setItem(n,17, item)
+        # Fill programmatic tab
+        self.fill_text()
+
     def sort_table(self):
         global table
         # Interpret table
         frames = []
+        possible_frame = 1
         for i in range(1,table.rowCount()):
             val = table.cellWidget(i,0)
             if isinstance(val,QSpinBox):
@@ -193,25 +222,106 @@ class GUI(Ui_MainWindow):
                     key = f'{key}{list[i]}'
                 if key == '':
                     key = 'NONE'
+                frame = val.value()
+                print(possible_frame,frame)
                 frames.append([False,{
-                'Frame':f'{val.value()}',
+                'Frame':frame,
                 'Key':f'{key}',
                 'LeftStick':'0;0',
                 'RightStick':'0;0',
                 'Caller':'main',
                 }])
+                if possible_frame < frame:
+                    possible_frame = frame
+                elif possible_frame == frame:
+                    frames.pop()
             else:
-                frames.append([True,val.currentText()])
+                for n in functions:
+                    if val.currentText() == n['name']:
+                        l = n.copy()
+                        l['Frame'] = possible_frame
+                        frames.append([True,l])
+                        possible_frame += l['frames']
+                        break
         # Reorganize frames list
-        ...
+        def ex(elem):
+            return int(elem[1]['Frame'])
+        #for i in frames:
+            #print(i[0])
+            #for n in i[1]:
+                #print(f'   {n}: {i[1][n]}')
+        frames = sorted(frames,key=ex)
+        last = 0
+        # Make sure functions that start on the same frame as an input always go after
+        for n in range(len(frames)):
+            i = frames[n]
+            if i[1]['Frame'] == last and not i[0]:
+                i.insert(n - 1, l.pop(n))
+        # Remove any frames that are placed inside of a function
+        inp = False
+        re = []
+        for i in range(1,frames[-1][1]['Frame']+1):
+            net = [ frame for frame in frames if frame[1]['Frame'] == i ]
+            try:frame = next(frame for frame in frames if frame[1]['Frame'] == i)
+            except:frame = None
+            if len(net) == 0:
+                continue
+            elif len(net) == 1:
+                if inp:
+                    re.append(frame)
+                if frame[0]:
+                    inp = True
+                else:
+                    inp = False
+            elif len(net) == 2:
+                if frame[0]:
+                    inp = True
+                else:
+                    inp = False
+                continue
+            else:
+                raise Exception('Rare internal error: Too many inputs in a frame')
+        for i in re:
+            frames.remove(i)
+        print([ i[1]['Frame'] for i in frames ])
         return frames
 
     def write_table(self, frames):
         # Interpret frames
+        text = "# This is an auto-generated PyTAS file"
+        lastframe = 0
+        char = "'"
+        for i in functions:
+            text = f"{text}\ndef {i['name']}():\n"
+            for n in i['data']:
+                if n['Key'] != 'NONE' and ';' in n['LeftStick'] and ';' in n['RightStick']:
+                    text = f"{text}    script.input({int(n['Frame']) - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
+                else:
+                    text = f"{text}    script.wait({int(n['Frame']) - lastframe})"
+                lastframe = int(n['Frame'])
 
+        # Next, let's create main
+        text = f"{text}\ndef main():\n"
+        lastframe = 0
+        for i in frames:
+            if not i[0]:
+                i = i[1]
+                if i['Key'] != 'NONE' and ';' in i['LeftStick'] and ';' in i['RightStick']:
+                    text = f"{text}    script.input({i['Frame'] - lastframe},({','.join([ f'{char}{h}{char}' for h in i['Key'].split(';') ])},),{','.join(i['LeftStick'].split(';'))},{','.join(i['RightStick'].split(';'))})\n"
+                else:
+                    text = f"{text}    script.wait({i['Frame'] - lastframe})\n"
+                lastframe = i['Frame']
+            else:
+                i = i[1]
+                text = f"{text}    {i['name']}()\n"
+                lastframe += i['frames']
+        if len(frames) == 0:
+            text = f"{text}    pass"
+
+        text = f"{text}\nfrom core.main import script\nscript = script()\nscript.run(main)\n"
         # Write to buffer
-
-        pass
+        global buffer
+        buffer = text
 
     def removeRow(self, row):
         table.removeRow(row)
@@ -221,8 +331,6 @@ class GUI(Ui_MainWindow):
     def textUpdate(self):
         global buffer
         buffer = textEdit.toPlainText()
-        # Fill table
-        self.fill_table()
 
     def tableUpdate(self, row, col):
         if col == 17 and row != 0:
@@ -239,6 +347,20 @@ class GUI(Ui_MainWindow):
 
     def comboUpdate(self):
         self.tableUpdate(0,0)
+
+    def tabUpdate(self):
+        # Fill table
+        self.fill_table()
+
+    # QActions
+    def runFile(self):
+        exec(buffer, globals(), None)
+        notice = QMessageBox()
+
+        notice.setText('Process Success!')
+        notice.setWindowTitle('Process Success!')
+        notice.setDetailedText(f'File output written to \'{filename}\'')
+        notice.exec_()
 
     def askSave(self):
         dlg = QMessageBox()
@@ -264,6 +386,7 @@ class GUI(Ui_MainWindow):
 if __name__ == '__main__':
     script = core.main.script()
     filename = './script.py'
+    output = 'script1'
     with open(filename,'r') as file:
         buffer = file.read()
 
