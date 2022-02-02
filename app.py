@@ -133,7 +133,6 @@ class GUI(Ui_MainWindow):
         'from core.main import script\nscript = script()'
         fileEnvironment = {}
         exec(buff, fileEnvironment, None)
-        print(buff)
         vals = fileEnvironment['script'].run(fileEnvironment['main'],output,True)
         # Begin interpreting functions
         functions = []
@@ -223,7 +222,10 @@ class GUI(Ui_MainWindow):
                 if key == '':
                     key = 'NONE'
                 frame = val.value()
-                print(possible_frame,frame)
+                if possible_frame < frame:
+                    possible_frame = frame
+                elif possible_frame == frame:
+                    frame += 1
                 frames.append([False,{
                 'Frame':frame,
                 'Key':f'{key}',
@@ -231,10 +233,6 @@ class GUI(Ui_MainWindow):
                 'RightStick':'0;0',
                 'Caller':'main',
                 }])
-                if possible_frame < frame:
-                    possible_frame = frame
-                elif possible_frame == frame:
-                    frames.pop()
             else:
                 for n in functions:
                     if val.currentText() == n['name']:
@@ -246,10 +244,6 @@ class GUI(Ui_MainWindow):
         # Reorganize frames list
         def ex(elem):
             return int(elem[1]['Frame'])
-        #for i in frames:
-            #print(i[0])
-            #for n in i[1]:
-                #print(f'   {n}: {i[1][n]}')
         frames = sorted(frames,key=ex)
         last = 0
         # Make sure functions that start on the same frame as an input always go after
@@ -258,32 +252,13 @@ class GUI(Ui_MainWindow):
             if i[1]['Frame'] == last and not i[0]:
                 i.insert(n - 1, l.pop(n))
         # Remove any frames that are placed inside of a function
-        inp = False
-        re = []
-        for i in range(1,frames[-1][1]['Frame']+1):
-            net = [ frame for frame in frames if frame[1]['Frame'] == i ]
-            try:frame = next(frame for frame in frames if frame[1]['Frame'] == i)
-            except:frame = None
-            if len(net) == 0:
-                continue
-            elif len(net) == 1:
-                if inp:
-                    re.append(frame)
-                if frame[0]:
-                    inp = True
-                else:
-                    inp = False
-            elif len(net) == 2:
-                if frame[0]:
-                    inp = True
-                else:
-                    inp = False
-                continue
-            else:
-                raise Exception('Rare internal error: Too many inputs in a frame')
-        for i in re:
-            frames.remove(i)
-        print([ i[1]['Frame'] for i in frames ])
+        for i in frames:
+            if i[0]:
+                for n in range(i[1]['Frame'] + 1,i[1]['Frame'] + i[1]['frames']):
+                    for e in [ frame for frame in frames if frame[1]['Frame'] == n ]:
+                        e[1]['Frame'] = i[1]['Frame'] + i[1]['frames'] + 1
+                        while len([ frame for frame in frames if frame[1]['Frame'] == e[1]['Frame'] and frame != e ]) > 0:
+                            e[1]['Frame'] += 1
         return frames
 
     def write_table(self, frames):
