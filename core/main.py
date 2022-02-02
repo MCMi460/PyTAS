@@ -85,7 +85,7 @@ class script():
             text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']}\n"
         return text
 
-    def run(self,MAIN,filename:str='script1',re:bool=False):
+    def run(self,MAIN,FILENAME:str='script1',RE:bool=False):
         if self.timer:
             self.timer.start()
             print('Started timer!')
@@ -93,9 +93,9 @@ class script():
             MAIN()
             if not os.path.isdir(self.path):
                 os.mkdir(self.path)
-            if re:
+            if RE:
                 return self.input_arr
-            with open(f'{self.path}/{filename}.txt','w') as file:
+            with open(f'{self.path}/{FILENAME}.txt','w') as file:
                 file.write(self.justify(self.input_arr))
         except Exception as e:
             print('A fatal error occurred. Please review the error message.')

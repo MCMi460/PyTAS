@@ -19,8 +19,10 @@ STICK2_Y is the same as the above, but for vertical right stick usage.
 FRAME is an integer and cannot be negative or a decimal point.
 
 There is a third function, `run()`.  
-`run()` takes 1 positional argument, MAIN.  
-MAIN is your function that contains the inputs to run.
+`run()` takes 3 positional arguments: MAIN, FILENAME, and RE.  
+MAIN is your function that contains the inputs to run. Pass a function as this parameter, but do not call it.  
+FILENAME is the name of the output file. This does not include the file extension. By default, it is set to `script1`. The file is outputted in the `./output` directory.  
+RE does not write the script to an output file. Instead, `run()` returns the internal variable, `input_arr`, a list type which includes all inputs received.
 
 *\*It's important to note that FRAME is the number of frames since the previous frame as it is how functions work properly.*
 
