@@ -10,6 +10,8 @@ keys.pop(0)
 keys = tuple(keys)
 # Global variables for use
 # -Qt Stuff
+height = 0
+width = 0
 fileMenu = None
 editMenu = None
 viewMenu = None
@@ -59,6 +61,7 @@ class GUI(Ui_MainWindow):
         self.MainWindow.closeEvent = self.closeEvent
 
     def setup_window(self):
+        global height, width
         # Window formatting
         screen = app.primaryScreen()
         size = screen.availableGeometry()
@@ -85,18 +88,25 @@ class GUI(Ui_MainWindow):
         header.setSectionResizeMode(QHeaderView.Stretch)
 
         table.setRowCount(self.row_count)
+        table.setColumnCount(len(keys) + 4)
         table.setSelectionBehavior(QAbstractItemView.SelectRows)
         item = QTableWidgetItem("Frame")
         item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         table.setItem(0,0, item)
 
+        item = QTableWidgetItem("L-Stick")
+        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        self.table.setItem(0,1, item)
+        item = QTableWidgetItem("R-Stick")
+        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        self.table.setItem(0,2, item)
         item = QTableWidgetItem("<>")
         item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-        self.table.setItem(0,17, item)
+        self.table.setItem(0,len(keys) + 3, item)
         for i in range(len(keys)):
             item = QTableWidgetItem(keys[i].replace('KEY_',''))
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            self.table.setItem(0,i + 1, item)
+            self.table.setItem(0,i + 3, item)
 
         table.cellClicked.connect(self.tableUpdate)
 
@@ -113,6 +123,7 @@ class GUI(Ui_MainWindow):
         functionBox.setGeometry(QRect(0, 0, int(width - width / 130), int(height / 22)))
 
     def create_menu(self):
+        # File menu
         openFile = QAction('&Open File', self.MainWindow)
         openFile.setShortcut('Ctrl+O')
         openFile.triggered.connect(self.openFile)
@@ -132,6 +143,12 @@ class GUI(Ui_MainWindow):
         exit.setShortcut('Ctrl+Q')
         exit.triggered.connect(self.exit)
         fileMenu.addAction(exit)
+
+        # Edit menu
+        newFrame = QAction('&New Frame', self.MainWindow)
+        newFrame.setShortcut('Ctrl+N')
+        newFrame.triggered.connect(self.add_Frame)
+        editMenu.addAction(newFrame)
 
         def switch_tab1():
             self.tabWidget.setCurrentIndex(0)
@@ -171,6 +188,8 @@ class GUI(Ui_MainWindow):
                 continue
             fileEnvironment['script'].__init__()
             f_vals = fileEnvironment['script'].run(fileEnvironment[i],output,True)
+            if not f_vals:
+                continue
             functions.append({
             'name':i,
             'data':f_vals,
@@ -202,6 +221,7 @@ class GUI(Ui_MainWindow):
         for n in range(1,len(frames) + 1):
             i = frames[n - 1]
 
+            # Frame/Function
             if not i[0]:
                 item = QSpinBox()
                 item.setMinimum(0)
@@ -211,10 +231,23 @@ class GUI(Ui_MainWindow):
             else:
                 item = QComboBox()
                 item.addItems([ i['name'] for i in functions ])
+                item.setCurrentText(i[1])
                 item.currentIndexChanged.connect(self.comboUpdate)
             table.setCellWidget(n, 0, item)
 
-            for j in range(16):
+            # Sticks
+            h = 1
+            for j in ['LeftStick','RightStick']:
+                item = QTableWidgetItem()
+                if i[0]:
+                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                else:
+                    item.setText(i[1][j])
+                table.setItem(n, h, item)
+                h += 1
+
+            # Keys
+            for j in range(len(keys)):
                 item = QTableWidgetItem()
                 if not i[0]:
                     item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
@@ -224,11 +257,11 @@ class GUI(Ui_MainWindow):
                         item.setCheckState(Qt.Unchecked)
                 else:
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                table.setItem(n, j + 1, item)
+                table.setItem(n, j + 3, item)
 
             item = QTableWidgetItem("X")
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            self.table.setItem(n,17, item)
+            self.table.setItem(n,len(keys) + 3, item)
         # Fill programmatic tab
         self.fill_text()
         # Properly setup variables
@@ -243,9 +276,9 @@ class GUI(Ui_MainWindow):
             val = table.cellWidget(i,0)
             if isinstance(val,QSpinBox):
                 list = []
-                for n in range(1,17):
+                for n in range(3,len(keys) + 3):
                     if table.item(i,n).checkState() == Qt.Checked:
-                        list.append(keys[n-1])
+                        list.append(keys[n-3])
                 key = ''
                 for i in range(len(list)):
                     if i > 0:
@@ -253,6 +286,8 @@ class GUI(Ui_MainWindow):
                     key = f'{key}{list[i]}'
                 if key == '':
                     key = 'NONE'
+                lstick = table.item(i,1)
+                rstick = table.item(i,2)
                 frame = val.value()
                 if possible_frame < frame:
                     possible_frame = frame
@@ -265,8 +300,8 @@ class GUI(Ui_MainWindow):
                 frames.append([False,{
                 'Frame':frame,
                 'Key':f'{key}',
-                'LeftStick':'0;0',
-                'RightStick':'0;0',
+                'LeftStick':f'{lstick.text()}',
+                'RightStick':f'{rstick.text()}',
                 'Caller':'main',
                 }])
             else:
@@ -277,6 +312,10 @@ class GUI(Ui_MainWindow):
                         frames.append([True,l])
                         possible_frame += l['frames']
                         break
+        #for i in frames:
+            #print(i[0])
+            #for n in i[1]:
+                #print(f'   {n}: {i[1][n]}')
         # Reorganize frames list
         def ex(elem):
             return int(elem[1]['Frame'])
@@ -300,15 +339,15 @@ class GUI(Ui_MainWindow):
     def write_table(self, frames):
         # Interpret frames
         text = "# This is an auto-generated PyTAS file"
-        lastframe = 0
         char = "'"
         for i in functions:
+            lastframe = 0
             text = f"{text}\ndef {i['name']}():\n"
             for n in i['data']:
-                if n['Key'] != 'NONE' and ';' in n['LeftStick'] and ';' in n['RightStick']:
+                if n['Key'] != 'NONE' or n['LeftStick'] != '0;0' or n['RightStick'] != '0;0':
                     text = f"{text}    script.input({int(n['Frame']) - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
                 else:
-                    text = f"{text}    script.wait({int(n['Frame']) - lastframe})"
+                    text = f"{text}    script.wait({int(n['Frame']) - lastframe})\n"
                 lastframe = int(n['Frame'])
 
         # Next, let's create main
@@ -317,7 +356,7 @@ class GUI(Ui_MainWindow):
         for i in frames:
             if not i[0]:
                 i = i[1]
-                if i['Key'] != 'NONE' and ';' in i['LeftStick'] and ';' in i['RightStick']:
+                if i['Key'] != 'NONE' or i['LeftStick'] != '0;0' or i['RightStick'] != '0;0':
                     text = f"{text}    script.input({i['Frame'] - lastframe},({','.join([ f'{char}{h}{char}' for h in i['Key'].split(';') ])},),{','.join(i['LeftStick'].split(';'))},{','.join(i['RightStick'].split(';'))})\n"
                 else:
                     text = f"{text}    script.wait({i['Frame'] - lastframe})\n"
@@ -344,8 +383,10 @@ class GUI(Ui_MainWindow):
         buffer = textEdit.toPlainText()
 
     def tableUpdate(self, row, col):
-        if col == 17 and row != 0:
+        if col == len(keys) + 3 and row != 0:
             self.removeRow(row)
+        elif 3 > col > 0 and row != 0:
+            self.changeStick(row, col)
         global table
 
         # Sort table, write changes
@@ -381,17 +422,126 @@ class GUI(Ui_MainWindow):
         table.setCellWidget(self.row_count - 1, 0, item)
 
         # Set keys
-        for j in range(16):
+        for j in range(len(keys)):
             item = QTableWidgetItem()
             item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
             item.setCheckState(Qt.Unchecked)
-            table.setItem(self.row_count - 1, j + 1, item)
+            table.setItem(self.row_count - 1, j + 3, item)
 
         # Update table
-        self.tableUpdate(1,1)
+        self.tableUpdate(0,0)
 
     def add_Function(self):
-        pass
+        # Add row
+        self.row_count += 1
+        table.setRowCount(self.row_count)
+
+        # Set frame
+        item = QComboBox()
+        item = QComboBox()
+        item.addItems([ i['name'] for i in functions ])
+        item.currentIndexChanged.connect(self.comboUpdate)
+        table.setCellWidget(self.row_count - 1, 0, item)
+
+        # Set keys
+        for j in range(len(keys)):
+            item = QTableWidgetItem()
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            table.setItem(self.row_count - 1, j + 3, item)
+
+        # Update table
+        self.tableUpdate(0,0)
+
+    def changeStick(self, row, col):
+        global table
+        cell = table.item(row,col)
+        first = table.cellWidget(row,0)
+        if isinstance(first,QComboBox) or not cell:
+            return
+        if col == 1:
+            stick = 'LeftStick'
+        else:
+            stick = 'RightStick'
+        data = [ int(axis) for axis in cell.text().split(';') ]
+        x = data[0]
+        y = data[1]
+        # Begin creating window
+        class Ui_StickControl(object):
+            def setupUi(self, MainWindow):
+                self.MainWindow = MainWindow
+                self.MainWindow.setWindowTitle(f'Frame #{first.value()} - {stick}')
+                self.width = int(width / 5)
+                self.height = int(height / 2)
+                self.center = int(self.width / 2)
+                self.radii = int(self.center / 1.25)
+                if self.height < self.width:
+                    self.height = int(self.width * 1.5)
+                self.MainWindow.setFixedSize(self.width, self.height)
+                self.MainWindow.paintEvent = self.paintEvent
+                self.MainWindow.setAutoFillBackground(True)
+
+                self.centralwidget = QWidget(self.MainWindow)
+                self.centralwidget.setObjectName("centralwidget")
+
+                self.x = x
+                self.y = y
+
+                self.xSpin = QSpinBox(self.centralwidget)
+                self.xSpin.setGeometry(QRect(int(self.radii / 2), self.center + int(self.radii * 1.2), int(self.radii / 1.5), int(self.radii / 4)))
+                self.xSpin.setMinimum(-32767)
+                self.xSpin.setMaximum(32767)
+                self.xSpin.setValue(x)
+                self.xSpin.valueChanged.connect(self.xSpinUpdate)
+
+                self.ySpin = QSpinBox(self.centralwidget)
+                self.ySpin.setGeometry(QRect(int(self.radii * (4/3)), self.center + int(self.radii * 1.2), int(self.radii / 1.5), int(self.radii / 4)))
+                self.ySpin.setMinimum(-32767)
+                self.ySpin.setMaximum(32767)
+                self.ySpin.setValue(y)
+                self.ySpin.valueChanged.connect(self.ySpinUpdate)
+
+            def paintEvent(self, event):
+                self.centralwidget.painter = QPainter()
+                self.centralwidget.painter.begin(self.MainWindow)
+                self.centralwidget.painter.setPen(QPen(QColor(0,0,0), 3, Qt.SolidLine))
+                self.centralwidget.painter.setBrush(QColor(40, 40, 40))
+                self.centralwidget.painter.drawEllipse(QPoint(self.center,self.center), self.radii, self.radii)
+                self.centralwidget.painter.drawLine(self.center - self.radii,self.center,self.center + self.radii,self.center)
+                self.centralwidget.painter.drawLine(self.center,self.center - self.radii,self.center,self.center + self.radii)
+                self.centralwidget.painter.setPen(QPen(QColor(255,0,0), 1, Qt.SolidLine))
+                self.centralwidget.painter.setBrush(QColor(255, 0, 0))
+                self.centralwidget.painter.drawEllipse(QPoint(int(self.center + (self.x * self.radii / 32767)),int(self.center + (self.y * self.radii / 32767))), 5, 5)
+                self.centralwidget.painter.end()
+
+            def xSpinUpdate(self):
+                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) < self.radii:
+                    self.x = self.xSpin.value()
+                else:
+                    self.xSpin.setValue(self.x)
+                self.MainWindow.update()
+
+            def ySpinUpdate(self):
+                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) < self.radii:
+                    self.y = self.ySpin.value()
+                else:
+                    self.ySpin.setValue(self.y)
+                self.MainWindow.update()
+        global stickControl
+        stickControl = QWidget()
+        def closeEvent(event: QCloseEvent):
+            stickControl.close()
+            self.MainWindow.setEnabled(True)
+            x = Ui_StickControl.x
+            y = Ui_StickControl.y
+            item = QTableWidgetItem()
+            item.setText(f'{x};{y}')
+            table.setItem(row, col, item)
+            self.tableUpdate(0,0)
+        stickControl.closeEvent = closeEvent
+        Ui_StickControl = Ui_StickControl()
+        Ui_StickControl.setupUi(stickControl)
+        self.MainWindow.setEnabled(False)
+        stickControl.show()
 
     def closeEvent(self, event: QCloseEvent):
         event.ignore()

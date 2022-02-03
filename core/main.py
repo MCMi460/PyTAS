@@ -1,7 +1,7 @@
 import os
 import inspect
 
-version = 0.1
+version = 0.2
 
 class script():
     def __init__(self,time:bool=False):
@@ -11,8 +11,6 @@ class script():
         'KEY_B',
         'KEY_X',
         'KEY_Y',
-        'KEY_LSTICK',
-        'KEY_RSTICK',
         'KEY_L',
         'KEY_R',
         'KEY_ZL',
@@ -23,6 +21,8 @@ class script():
         'KEY_DUP',
         'KEY_DRIGHT',
         'KEY_DDOWN',
+        'KEY_LSTICK',
+        'KEY_RSTICK',
         )
         self.input_arr = []
         self.curr_frame = 0

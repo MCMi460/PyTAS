@@ -8,6 +8,12 @@ def roll_cancel():
     script.input(1,('KEY_A',),30000,0,0,0)
     script.input(1,('KEY_A',),30000,0,0,0)
 
+def spin():
+    for i in range(11):
+        script.input(1,('NONE',),0,32767,0,0)
+        script.input(1,('NONE',),-28377,-16383,0,0)
+        script.input(1,('NONE',),28377,-16383,0,0)
+
 # Put your inputs here!
 def main():
     for i in range(5):
