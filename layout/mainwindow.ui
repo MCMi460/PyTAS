@@ -36,7 +36,7 @@
         <x>10</x>
         <y>30</y>
         <width>1271</width>
-        <height>611</height>
+        <height>591</height>
        </rect>
       </property>
       <property name="font">
@@ -82,6 +82,32 @@
         <width>1291</width>
         <height>32</height>
        </rect>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="addFunction">
+      <property name="geometry">
+       <rect>
+        <x>1170</x>
+        <y>620</y>
+        <width>113</width>
+        <height>32</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Add Function</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="addFrame">
+      <property name="geometry">
+       <rect>
+        <x>1060</x>
+        <y>620</y>
+        <width>113</width>
+        <height>32</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Add Frame</string>
       </property>
      </widget>
     </widget>

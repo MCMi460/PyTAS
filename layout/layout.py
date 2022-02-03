@@ -23,7 +23,7 @@ class Ui_MainWindow(object):
         self.tab1 = QtWidgets.QWidget()
         self.tab1.setObjectName("tab1")
         self.table = QtWidgets.QTableWidget(self.tab1)
-        self.table.setGeometry(QtCore.QRect(10, 30, 1271, 611))
+        self.table.setGeometry(QtCore.QRect(10, 30, 1271, 591))
         font = QtGui.QFont()
         font.setPointSize(11)
         font.setBold(False)
@@ -37,6 +37,12 @@ class Ui_MainWindow(object):
         self.functionBox = QtWidgets.QComboBox(self.tab1)
         self.functionBox.setGeometry(QtCore.QRect(0, 0, 1291, 32))
         self.functionBox.setObjectName("functionBox")
+        self.addFunction = QtWidgets.QPushButton(self.tab1)
+        self.addFunction.setGeometry(QtCore.QRect(1170, 620, 113, 32))
+        self.addFunction.setObjectName("addFunction")
+        self.addFrame = QtWidgets.QPushButton(self.tab1)
+        self.addFrame.setGeometry(QtCore.QRect(1060, 620, 113, 32))
+        self.addFrame.setObjectName("addFrame")
         self.tabWidget.addTab(self.tab1, "Visual")
         self.tab2 = QtWidgets.QWidget()
         self.tab2.setObjectName("tab2")
@@ -58,6 +64,8 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.addFunction.setText(_translate("MainWindow", "Add Function"))
+        self.addFrame.setText(_translate("MainWindow", "Add Frame"))
         self.textEdit.setPlaceholderText(_translate("MainWindow", "Your code is here! The main() function is what\'s run."))
 
 

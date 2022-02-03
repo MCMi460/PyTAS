@@ -16,6 +16,8 @@ viewMenu = None
 textEdit = None
 table = None
 functionBox = None
+addFrame = None
+addFunction = None
 # -PyTAS stuff
 frames = []
 functions = []
@@ -39,20 +41,22 @@ class GUI(Ui_MainWindow):
         self.setup_window()
         self.create_menu()
 
-        # A commonly-recurring function that pulls data from the buffer and writes it to the table
-        self.fill_table()
-
-        self.notice()
+        # Open file
+        self.openFile()
 
     def assign_variables(self):
         global fileMenu, editMenu, viewMenu
         fileMenu = self.menubar.addMenu('&File')
         editMenu = self.menubar.addMenu('&Edit')
         viewMenu = self.menubar.addMenu('&View')
-        global textEdit, table, functionBox
+        global textEdit, table, functionBox, addFrame, addFunction
         textEdit = self.tabWidget.findChild(QWidget,'tab2').findChild(QTextEdit,'textEdit')
         table = self.tabWidget.findChild(QWidget,'tab1').findChild(QTableWidget,'table')
         functionBox = self.tabWidget.findChild(QWidget,'tab1').findChild(QComboBox,'functionBox')
+        addFrame = self.tabWidget.findChild(QWidget,'tab1').findChild(QPushButton,'addFrame')
+        addFunction = self.tabWidget.findChild(QWidget,'tab1').findChild(QPushButton,'addFunction')
+        # Actions
+        self.MainWindow.closeEvent = self.closeEvent
 
     def setup_window(self):
         # Window formatting
@@ -63,19 +67,18 @@ class GUI(Ui_MainWindow):
         self.MainWindow.setWindowTitle(f'PyTAS Editor v{version}')
         self.MainWindow.setFixedSize(width, height)
         self.MainWindow.showMaximized()
-        print(width,height)
 
         # Function box formatting
         functionBox.clear()
         functionBox.addItem('main')
 
         # Tabs formatting
-        self.tabWidget.setGeometry(QRect(0, 0, width, height - 20))
+        self.tabWidget.setGeometry(QRect(0, 0, int(width), int(height - 20)))
 
         self.tabWidget.currentChanged.connect(self.tabUpdate)
 
         # Table formatting
-        table.setGeometry(QRect(width / 130, height / 23, width - width / 45, height - height / 8))
+        table.setGeometry(QRect(int(width / 130), int(height / 23), int(width - width / 45), int(height - height / 7)))
         self.row_count = 1
         header = table.horizontalHeader()
         header.setDefaultAlignment(Qt.AlignCenter)
@@ -91,19 +94,30 @@ class GUI(Ui_MainWindow):
         item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.table.setItem(0,17, item)
         for i in range(len(keys)):
-            item = QTableWidgetItem(keys[i])
+            item = QTableWidgetItem(keys[i].replace('KEY_',''))
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             self.table.setItem(0,i + 1, item)
 
         table.cellClicked.connect(self.tableUpdate)
 
+        # Buttons formatting
+        addFrame.setGeometry(QRect(int(width - width / 13), int(height - height / 10), 113, 32))
+        addFrame.clicked.connect(self.add_Frame)
+        addFunction.setGeometry(QRect(int(width - width / 7.5), int(height - height / 10), 113, 32))
+        addFunction.clicked.connect(self.add_Function)
+
         # TextEdit formatting
-        textEdit.setGeometry(QRect(width / 130, width / 70, width - width / 45, height - height / 8))
+        textEdit.setGeometry(QRect(int(width / 130), int(width / 70), int(width - width / 45), int(height - height / 8)))
 
         # FunctionBox formatting
-        functionBox.setGeometry(QRect(0, 0, width - width / 130, height / 22))
+        functionBox.setGeometry(QRect(0, 0, int(width - width / 130), int(height / 22)))
 
     def create_menu(self):
+        openFile = QAction('&Open File', self.MainWindow)
+        openFile.setShortcut('Ctrl+O')
+        openFile.triggered.connect(self.openFile)
+        fileMenu.addAction(openFile)
+
         saveFile = QAction('&Save File', self.MainWindow)
         saveFile.setShortcut('Ctrl+S')
         saveFile.triggered.connect(self.askSave)
@@ -217,9 +231,11 @@ class GUI(Ui_MainWindow):
             self.table.setItem(n,17, item)
         # Fill programmatic tab
         self.fill_text()
+        # Properly setup variables
+        self.sort_table()
 
     def sort_table(self):
-        global table
+        global table, frames
         # Interpret table
         frames = []
         possible_frame = 1
@@ -242,6 +258,10 @@ class GUI(Ui_MainWindow):
                     possible_frame = frame
                 elif possible_frame == frame:
                     frame += 1
+                    possible_frame = frame
+                else:
+                    frame = possible_frame + 1
+                    possible_frame = frame
                 frames.append([False,{
                 'Frame':frame,
                 'Key':f'{key}',
@@ -343,7 +363,62 @@ class GUI(Ui_MainWindow):
         # Fill table
         self.fill_table()
 
+    def add_Frame(self):
+        # Add row
+        self.row_count += 1
+        table.setRowCount(self.row_count)
+
+        # Set frame
+        item = QSpinBox()
+        item.setMinimum(0)
+        item.setMaximum(999999)
+        if frames[-1]:
+            frame = frames[-1][1]['Frame'] + 1
+        else:
+            frame = frames[-1][1]['Frame'] + frames[-1][1]['frames'] + 1
+        item.setValue(frame)
+        item.valueChanged.connect(self.spinUpdate)
+        table.setCellWidget(self.row_count - 1, 0, item)
+
+        # Set keys
+        for j in range(16):
+            item = QTableWidgetItem()
+            item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            item.setCheckState(Qt.Unchecked)
+            table.setItem(self.row_count - 1, j + 1, item)
+
+        # Update table
+        self.tableUpdate(1,1)
+
+    def add_Function(self):
+        pass
+
+    def closeEvent(self, event: QCloseEvent):
+        event.ignore()
+        self.exit()
+
     # QActions
+    def openFile(self):
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.ExistingFiles)
+        dlg.setNameFilters(["Python files (*.py)",])
+        dlg.selectNameFilter("Python files (*.py)")
+
+        if dlg.exec_() == QDialog.Accepted:
+            global buffer, filename
+            filename = dlg.selectedFiles()[0]
+        else:
+            self.openFile()
+            return
+        # Buffer
+        with open(filename,'r') as file:
+            buffer = file.read()
+        # A commonly-recurring function that pulls data from the buffer and writes it to the table
+        self.fill_table()
+
+        # Warn users
+        self.notice()
+
     def runFile(self):
         exec(buffer, globals(), None)
         notice = QMessageBox()
@@ -375,11 +450,9 @@ class GUI(Ui_MainWindow):
         sys.exit("Closed app")
 
 if __name__ == '__main__':
-    script = core.main.script()
     filename = './script.py'
     output = 'script1'
-    with open(filename,'r') as file:
-        buffer = file.read()
+    buffer = None
 
     app = QApplication(sys.argv)
     MainWindow = QMainWindow()
