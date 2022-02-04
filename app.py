@@ -28,6 +28,28 @@ themes = [{
 frames = []
 functions = []
 
+default = """def roll_cancel():
+    script.input(1,('KEY_B',),0,0,0,0)
+    script.input(5,('KEY_ZL',),0,0,0,0)
+    script.input(35,('KEY_ZL','KEY_Y',),0,0,0,0)
+    script.input(2,('KEY_X','KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+    script.input(1,('KEY_A',),30000,0,0,0)
+
+# Put your inputs here!
+def main():
+    for i in range(5):
+        roll_cancel()
+        script.wait(60)
+    # All Python syntax should work!
+
+from core.main import script
+script = script()
+script.run(main)
+"""
+
 class GUI(Ui_MainWindow):
     def __init__(self,MainWindow):
         self.MainWindow = MainWindow
@@ -791,6 +813,10 @@ if __name__ == '__main__':
     filename = './script.py'
     output = 'script1'
     buffer = None
+
+    if not os.path.isfile(filename):
+        with open(filename,'w') as file:
+            file.write(default)
 
     app = QApplication(sys.argv)
 
