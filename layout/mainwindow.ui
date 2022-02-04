@@ -94,7 +94,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Add Function</string>
+       <string>Insert Function</string>
       </property>
      </widget>
      <widget class="QPushButton" name="addFrame">

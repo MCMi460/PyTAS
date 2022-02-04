@@ -44,7 +44,8 @@ class GUI(Ui_MainWindow):
         self.create_menu()
 
         # Open file
-        self.openFile()
+        while not self.openFile():
+            pass
 
     def assign_variables(self):
         global fileMenu, editMenu, viewMenu
@@ -179,7 +180,7 @@ class GUI(Ui_MainWindow):
         textEdit.textChanged.connect(self.textUpdate)
         textEdit.setPlainText(buffer)
 
-    def fill_table(self):
+    def fill_table(self, new:bool = 'False'):
         # Receive justified data of file from core.main
         global buffer, frames, functions, table, functionBox
         if 'from core.main' not in buffer:
@@ -205,6 +206,8 @@ class GUI(Ui_MainWindow):
             })
         # Get functionBox
         func = functionBox.currentText()
+        if new == 'True':
+            func = 'main'
         # Begin interpreting main
         frames = []
         if func != 'main':
@@ -223,7 +226,7 @@ class GUI(Ui_MainWindow):
         n = 0
         while n < len(vals):
             i = vals[n]
-            if i['Caller'] not in (func,'wait'):
+            if i['Caller'] not in (func,'wait') and func == 'main':
                 n += next(n for n in functions if n['name'] == i['Caller'])['length']
                 frames.append([True,i['Caller']])
             else:
@@ -374,8 +377,10 @@ class GUI(Ui_MainWindow):
                     lastframe = i['Frame']
                 else:
                     i = i[1]
-                    text = f"{text}    {i['name']}()\n"
-                    lastframe += i['frames']
+                    lastframe = 0
+                    for n in i['data']:
+                        text = f"{text}    script.input({n['Frame'] - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
+                        lastframe = int(n['Frame'])
             if len(frames) > 0:
                 text = text.rstrip()
                 buffer = buffer.replace(function,text)
@@ -413,8 +418,9 @@ class GUI(Ui_MainWindow):
                     text = f"{text}    script.input({int(n['Frame']) - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
                     lastframe = int(n['Frame'])
                 else:
-                    text = f"{text}    {n['Caller']}()\n"
-                    lastframe += int(next( f for f in functions if f['name'] == n['Caller'] )['frames'])
+                    for l in n['data']:
+                        text = f"{text}    script.input({l['Frame'] - lastframe},({','.join([ f'{char}{h}{char}' for h in l['Key'].split(';') ])},),{','.join(l['LeftStick'].split(';'))},{','.join(l['RightStick'].split(';'))})\n"
+                        lastframe = int(l['Frame'])
 
         # Next, let's create main
         text = f"{text}\ndef main():\n"
@@ -493,6 +499,14 @@ class GUI(Ui_MainWindow):
         funcs = [ i['name'] for i in functions if i['name'] != functionBox.currentText() and functionBox.currentText() not in self.getSource(i['name']) ]
         if not len(funcs) > 0:
             return
+        if len(funcs) > 1:
+            item, response = QInputDialog.getItem(self.MainWindow, "Select Function", "Which function would you like to insert?", funcs, 0, False)
+            if response and item:
+                func = item
+            else:
+                func = funcs[0]
+        else:
+            func = funcs[0]
         if table.rowCount() > 1:
             frame, response = QInputDialog.getInt(self.MainWindow, 'Insert Function', 'After which frame would you like to insert the function?',0,0,frames[-1][1]['Frame'])
             if not response:
@@ -513,8 +527,8 @@ class GUI(Ui_MainWindow):
 
         # Set frame
         item = QComboBox()
-        item.clear()
         item.addItems(funcs)
+        item.setCurrentText(func)
         item.currentIndexChanged.connect(self.comboUpdate)
         table.setCellWidget(index, 0, item)
 
@@ -702,16 +716,16 @@ class GUI(Ui_MainWindow):
             global buffer, filename
             filename = dlg.selectedFiles()[0]
         else:
-            self.openFile()
-            return
+            return False
         # Buffer
         with open(filename,'r') as file:
             buffer = file.read()
         # A commonly-recurring function that pulls data from the buffer and writes it to the table
-        self.fill_table()
+        self.fill_table('True')
 
         # Warn users
         self.notice()
+        return True
 
     def runFile(self):
         exec(buffer, globals(), None)

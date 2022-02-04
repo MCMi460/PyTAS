@@ -102,3 +102,6 @@ class script():
             print(e)
         if self.timer:
             print(f'Finished time in {self.timer.get()} seconds.')
+
+if __name__ == "__main__":
+    raise Exception('File ran as main. Please import this module into a script instead.')

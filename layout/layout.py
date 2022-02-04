@@ -64,7 +64,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.addFunction.setText(_translate("MainWindow", "Add Function"))
+        self.addFunction.setText(_translate("MainWindow", "Insert Function"))
         self.addFrame.setText(_translate("MainWindow", "Add Frame"))
         self.textEdit.setPlaceholderText(_translate("MainWindow", "Your code is here! The main() function is what\'s run."))
 
