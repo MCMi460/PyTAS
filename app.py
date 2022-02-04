@@ -20,6 +20,10 @@ table = None
 functionBox = None
 addFrame = None
 addFunction = None
+themes = [{
+    'name':'Default',
+    'data':'',
+},]
 # -PyTAS stuff
 frames = []
 functions = []
@@ -31,7 +35,7 @@ class GUI(Ui_MainWindow):
     def notice(self):
         notice = QMessageBox()
 
-        notice.setText('Warning!\nChanging files using the editor may result in unwanted changes in your file.\nPlease make sure you keep a backup before you save any changes.')
+        notice.setText('Warning!\nChanging files using the editor may result in unwanted changes in your file.\nPlease make sure you keep a backup before you save any changes.\nThank you for using my editor! -Delta/Mi460')
         notice.setWindowTitle("Warning!")
         notice.exec_()
 
@@ -121,7 +125,7 @@ class GUI(Ui_MainWindow):
         textEdit.setGeometry(QRect(int(width / 130), int(width / 70), int(width - width / 45), int(height - height / 8)))
 
         # FunctionBox formatting
-        functionBox.setGeometry(QRect(0, 0, int(width - width / 130), int(height / 22)))
+        functionBox.setGeometry(QRect(0, 0, int(width - width / 130), int(height / 35)))
         functionBox.activated.connect(self.fill_table)
 
     def create_menu(self):
@@ -151,6 +155,12 @@ class GUI(Ui_MainWindow):
         newFrame.setShortcut('Ctrl+N')
         newFrame.triggered.connect(self.add_Frame)
         editMenu.addAction(newFrame)
+
+        # View menu
+        newTheme = QAction('&Change Theme', self.MainWindow)
+        newTheme.setShortcut('Ctrl+K')
+        newTheme.triggered.connect(self.themeUpdate)
+        viewMenu.addAction(newTheme)
 
         def switch_tab1():
             self.tabWidget.setCurrentIndex(0)
@@ -504,7 +514,7 @@ class GUI(Ui_MainWindow):
             if response and item:
                 func = item
             else:
-                func = funcs[0]
+                return
         else:
             func = funcs[0]
         if table.rowCount() > 1:
@@ -567,6 +577,7 @@ class GUI(Ui_MainWindow):
             def setupUi(self, MainWindow):
                 self.MainWindow = MainWindow
                 self.MainWindow.setWindowTitle(f'Frame #{first.value()} - {stick}')
+                self.MainWindow.setStyleSheet('')
                 self.width = int(width / 5)
                 self.height = int(height / 2)
                 self.center = int(self.width / 2)
@@ -701,6 +712,13 @@ class GUI(Ui_MainWindow):
         # Fill table
         self.fill_table()
 
+    def themeUpdate(self):
+        item, response = QInputDialog.getItem(self.MainWindow, "Select Theme", "Which theme would you like to use?", [ theme['name'] for theme in themes ], 0, False)
+        if response and item:
+            self.MainWindow.setStyleSheet(next(theme for theme in themes if theme['name'] == item)['data'])
+        else:
+            return
+
     def closeEvent(self, event: QCloseEvent):
         event.ignore()
         self.exit()
@@ -767,6 +785,16 @@ if __name__ == '__main__':
     buffer = None
 
     app = QApplication(sys.argv)
+
+    for theme in ('Fibers','SyNet','Toolery'):
+        file = QFile(f"./layout/themes/{theme}.qss")
+        file.open(QFile.ReadOnly | QFile.Text)
+        stream = QTextStream(file)
+        themes.append({
+        'name':theme,
+        'data':stream.readAll(),
+        })
+
     MainWindow = QMainWindow()
     window = GUI(MainWindow)
     window.setupUi(MainWindow)

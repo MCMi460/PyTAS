@@ -1,7 +1,7 @@
 import os
 import inspect
 
-version = 0.2
+version = 0.3
 
 class script():
     def __init__(self,output:str='./output',time:bool=False):
