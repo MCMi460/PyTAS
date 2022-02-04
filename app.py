@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from layout.layout import Ui_MainWindow
-import core.main, sys, os, threading, random, time, math
+import core.main, sys, random, math, inspect, re
 
 version = core.main.version
 keys = list(core.main.script().keys)
@@ -121,6 +121,7 @@ class GUI(Ui_MainWindow):
 
         # FunctionBox formatting
         functionBox.setGeometry(QRect(0, 0, int(width - width / 130), int(height / 22)))
+        functionBox.activated.connect(self.fill_table)
 
     def create_menu(self):
         # File menu
@@ -163,6 +164,17 @@ class GUI(Ui_MainWindow):
         viewMenu.addAction(tab1)
         viewMenu.addAction(tab2)
 
+    def setupFileEnv(self):
+        buff = buffer
+        for line in buff.split('\n'):
+            if '.run(' in line:
+                buff = buff.replace(line,'')
+        buff = f'{buff}\n'
+        'from core.main import script\nscript = script()'
+        fileEnvironment = {}
+        exec(buff, fileEnvironment, None)
+        return fileEnvironment, buff
+
     def fill_text(self):
         textEdit.textChanged.connect(self.textUpdate)
         textEdit.setPlainText(buffer)
@@ -172,14 +184,9 @@ class GUI(Ui_MainWindow):
         global buffer, frames, functions, table, functionBox
         if 'from core.main' not in buffer:
             raise Exception('Invalid PyTAS file!')
-        buff = buffer
-        for line in buff.split('\n'):
-            if '.run(' in line:
-                buff = buff.replace(line,'')
-        buff = f'{buff}\n'
-        'from core.main import script\nscript = script()'
-        fileEnvironment = {}
-        exec(buff, fileEnvironment, None)
+        elif buffer.count('main()') > 1:
+            raise Exception('Cannot read, infinite recursion')
+        fileEnvironment, buff = self.setupFileEnv()
         vals = fileEnvironment['script'].run(fileEnvironment['main'],output,True)
         # Begin interpreting functions
         functions = []
@@ -196,12 +203,27 @@ class GUI(Ui_MainWindow):
             'frames':f_vals[-1]['Frame'],
             'length':len(f_vals),
             })
+        # Get functionBox
+        func = functionBox.currentText()
         # Begin interpreting main
         frames = []
+        if func != 'main':
+            if func == 'Create New Function':
+                func, response = QInputDialog.getText(self.MainWindow, 'Function Name', 'Enter the function name:')
+                if not response or not func:
+                    functionBox.setCurrentText('main')
+                    self.fill_table()
+                    return
+                buffer = f"def {func}():\n   script.wait(1)\n\n{buffer}"
+                functionBox.addItem(func)
+                functionBox.setCurrentText(func)
+                self.fill_table()
+                return
+            vals = next(n for n in functions if n['name'] == func)['data']
         n = 0
         while n < len(vals):
             i = vals[n]
-            if i['Caller'] not in ('main','wait'):
+            if i['Caller'] not in (func,'wait'):
                 n += next(n for n in functions if n['name'] == i['Caller'])['length']
                 frames.append([True,i['Caller']])
             else:
@@ -212,6 +234,9 @@ class GUI(Ui_MainWindow):
         # Begin filling functionBox
         functionBox.addItem('main')
         functionBox.addItems([ i['name'] for i in functions ])
+        functionBox.addItem('Create New Function')
+        if func != 'main':
+            functionBox.setCurrentText(func)
         # Clear table
         self.row_count = 1
         table.setRowCount(self.row_count)
@@ -230,7 +255,7 @@ class GUI(Ui_MainWindow):
                 item.valueChanged.connect(self.spinUpdate)
             else:
                 item = QComboBox()
-                item.addItems([ i['name'] for i in functions ])
+                item.addItems([ i['name'] for i in functions if i['name'] != func and func not in self.getSource(i['name']) ])
                 item.setCurrentText(i[1])
                 item.currentIndexChanged.connect(self.comboUpdate)
             table.setCellWidget(n, 0, item)
@@ -271,7 +296,8 @@ class GUI(Ui_MainWindow):
         global table, frames
         # Interpret table
         frames = []
-        possible_frame = 1
+        possible_frame = 0
+        func = functionBox.currentText()
         for i in range(1,table.rowCount()):
             val = table.cellWidget(i,0)
             if isinstance(val,QSpinBox):
@@ -280,10 +306,10 @@ class GUI(Ui_MainWindow):
                     if table.item(i,n).checkState() == Qt.Checked:
                         list.append(keys[n-3])
                 key = ''
-                for i in range(len(list)):
-                    if i > 0:
+                for n in range(len(list)):
+                    if n > 0:
                         key = f'{key};'
-                    key = f'{key}{list[i]}'
+                    key = f'{key}{list[n]}'
                 if key == '':
                     key = 'NONE'
                 lstick = table.item(i,1)
@@ -302,7 +328,7 @@ class GUI(Ui_MainWindow):
                 'Key':f'{key}',
                 'LeftStick':f'{lstick.text()}',
                 'RightStick':f'{rstick.text()}',
-                'Caller':'main',
+                'Caller':func,
                 }])
             else:
                 for n in functions:
@@ -337,6 +363,50 @@ class GUI(Ui_MainWindow):
         return frames
 
     def write_table(self, frames):
+        global buffer, functions
+        func = functionBox.currentText()
+        if func != 'main':
+            function = self.getSource(func)
+            # Interpret frames
+            char = "'"
+            text = f"def {func}():\n"
+            lastframe = 0
+            for i in frames:
+                if not i[0]:
+                    i = i[1]
+                    if i['Key'] != 'NONE' or i['LeftStick'] != '0;0' or i['RightStick'] != '0;0':
+                        text = f"{text}    script.input({i['Frame'] - lastframe},({','.join([ f'{char}{h}{char}' for h in i['Key'].split(';') ])},),{','.join(i['LeftStick'].split(';'))},{','.join(i['RightStick'].split(';'))})\n"
+                    else:
+                        text = f"{text}    script.wait({i['Frame'] - lastframe})\n"
+                    lastframe = i['Frame']
+                else:
+                    i = i[1]
+                    text = f"{text}    {i['name']}()\n"
+                    lastframe += i['frames']
+            if len(frames) > 0:
+                text = text.rstrip()
+                buffer = buffer.replace(function,text)
+                fileEnvironment = self.setupFileEnv()[0]
+                fileEnvironment['script'].__init__()
+                f_vals = fileEnvironment['script'].run(fileEnvironment[func],output,True)
+                functions.append({
+                'name':func,
+                'data':f_vals,
+                'frames':f_vals[-1]['Frame'],
+                'length':len(f_vals),
+                })
+                list = [ i for i in functions if i['name'] == func ]
+                if len(list) > 1 or len(frames) == 0:
+                    functions.remove(list[0])
+            else:
+                text = ''
+                buffer = buffer.replace(function,text)
+                functionBox.setCurrentText('main')
+                list = [ i for i in functions if i['name'] == func ]
+                functions.remove(list[0])
+                buffer = buffer.replace(f'{func}()','pass')
+                self.fill_table()
+            return
         # Interpret frames
         text = "# This is an auto-generated PyTAS file"
         char = "'"
@@ -344,11 +414,17 @@ class GUI(Ui_MainWindow):
             lastframe = 0
             text = f"{text}\ndef {i['name']}():\n"
             for n in i['data']:
-                if n['Key'] != 'NONE' or n['LeftStick'] != '0;0' or n['RightStick'] != '0;0':
-                    text = f"{text}    script.input({int(n['Frame']) - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
+                if int(n['Frame']) <= lastframe:
+                    continue
+                if n['Caller'] == i['name'] or n['Caller'] == 'wait':
+                    if n['Key'] != 'NONE' or n['LeftStick'] != '0;0' or n['RightStick'] != '0;0':
+                        text = f"{text}    script.input({int(n['Frame']) - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
+                    else:
+                        text = f"{text}    script.wait({int(n['Frame']) - lastframe})\n"
+                    lastframe = int(n['Frame'])
                 else:
-                    text = f"{text}    script.wait({int(n['Frame']) - lastframe})\n"
-                lastframe = int(n['Frame'])
+                    text = f"{text}    {n['Caller']}()\n"
+                    lastframe += int(next( f for f in functions if f['name'] == n['Caller'] )['frames'])
 
         # Next, let's create main
         text = f"{text}\ndef main():\n"
@@ -370,39 +446,20 @@ class GUI(Ui_MainWindow):
 
         text = f"{text}\nfrom core.main import script\nscript = script()\nscript.run(main)\n"
         # Write to buffer
-        global buffer
         buffer = text
 
-    def removeRow(self, row):
-        table.removeRow(row)
-        self.row_count -= 1
-
-    # Event-based functions
-    def textUpdate(self):
-        global buffer
-        buffer = textEdit.toPlainText()
-
-    def tableUpdate(self, row, col):
-        if col == len(keys) + 3 and row != 0:
-            self.removeRow(row)
-        elif 3 > col > 0 and row != 0:
-            self.changeStick(row, col)
-        global table
-
-        # Sort table, write changes
-        self.write_table(self.sort_table())
-        # Fill table
-        self.fill_table()
-
-    def spinUpdate(self):
-        self.tableUpdate(0,0)
-
-    def comboUpdate(self):
-        self.tableUpdate(0,0)
-
-    def tabUpdate(self):
-        # Fill table
-        self.fill_table()
+    def getSource(self, function):
+        fileEnvironment, buff = self.setupFileEnv()
+        lines = buff.split('\n')
+        # Some of this is sampled from the Python inspect module
+        # I did not fully author the code from here -
+        object = fileEnvironment[function].__code__
+        lnum = object.co_firstlineno - 1
+        pat = re.compile(r'^\s*def\s')
+        while lnum > 0:
+            if pat.match(lines[lnum]): break
+            lnum = lnum - 1
+        return '\n'.join(inspect.getblock(lines[lnum:])) # - to here
 
     def add_Frame(self):
         # Add row
@@ -413,13 +470,24 @@ class GUI(Ui_MainWindow):
         item = QSpinBox()
         item.setMinimum(0)
         item.setMaximum(999999)
-        if frames[-1]:
-            frame = frames[-1][1]['Frame'] + 1
+        if len(frames) > 0:
+            if frames[-1]:
+                frame = frames[-1][1]['Frame'] + 1
+            else:
+                frame = frames[-1][1]['Frame'] + frames[-1][1]['frames'] + 1
         else:
-            frame = frames[-1][1]['Frame'] + frames[-1][1]['frames'] + 1
+            frame = 1
         item.setValue(frame)
         item.valueChanged.connect(self.spinUpdate)
         table.setCellWidget(self.row_count - 1, 0, item)
+
+        # Sticks
+        h = 1
+        for j in ['LeftStick','RightStick']:
+            item = QTableWidgetItem()
+            item.setText('0;0')
+            table.setItem(self.row_count - 1, h, item)
+            h += 1
 
         # Set keys
         for j in range(len(keys)):
@@ -432,16 +500,27 @@ class GUI(Ui_MainWindow):
         self.tableUpdate(0,0)
 
     def add_Function(self):
+        funcs = [ i['name'] for i in functions if i['name'] != functionBox.currentText() and functionBox.currentText() not in self.getSource(i['name']) ]
+        if not len(funcs) > 0:
+            return
         # Add row
         self.row_count += 1
         table.setRowCount(self.row_count)
 
         # Set frame
         item = QComboBox()
-        item = QComboBox()
-        item.addItems([ i['name'] for i in functions ])
+        item.clear()
+        item.addItems(funcs)
         item.currentIndexChanged.connect(self.comboUpdate)
         table.setCellWidget(self.row_count - 1, 0, item)
+
+        # Sticks
+        h = 1
+        for j in ['LeftStick','RightStick']:
+            item = QTableWidgetItem()
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            table.setItem(self.row_count - 1, h, item)
+            h += 1
 
         # Set keys
         for j in range(len(keys)):
@@ -542,6 +621,37 @@ class GUI(Ui_MainWindow):
         Ui_StickControl.setupUi(stickControl)
         self.MainWindow.setEnabled(False)
         stickControl.show()
+
+    def removeRow(self, row):
+        table.removeRow(row)
+        self.row_count -= 1
+
+    # Event-based functions
+    def textUpdate(self):
+        global buffer
+        buffer = textEdit.toPlainText()
+
+    def tableUpdate(self, row, col):
+        if col == len(keys) + 3 and row != 0:
+            self.removeRow(row)
+        elif 3 > col > 0 and row != 0:
+            self.changeStick(row, col)
+        global table
+
+        # Sort table, write changes
+        self.write_table(self.sort_table())
+        # Fill table
+        self.fill_table()
+
+    def spinUpdate(self):
+        self.tableUpdate(0,0)
+
+    def comboUpdate(self):
+        self.tableUpdate(0,0)
+
+    def tabUpdate(self):
+        # Fill table
+        self.fill_table()
 
     def closeEvent(self, event: QCloseEvent):
         event.ignore()
