@@ -4,7 +4,7 @@ import inspect
 version = 0.2
 
 class script():
-    def __init__(self,time:bool=False):
+    def __init__(self,output:str='./output',time:bool=False):
         self.keys = (
         'NONE',
         'KEY_A',
@@ -26,7 +26,7 @@ class script():
         )
         self.input_arr = []
         self.curr_frame = 0
-        self.path = './output'
+        self.path = output
         self.timer = time
         if time:
             from .utility import Timer

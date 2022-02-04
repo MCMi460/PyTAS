@@ -5,6 +5,10 @@ PyTAS is a Python implementation of [nx-TAS](https://github.com/hamhub7/tas-scri
 To use it, simply type your code in the `main()` function and run [script.py](/script.py).  
 Any extra functions you create in [script.py](/script.py) may not work with the GUI extension if they have arguments required.
 
+## Usage
+
+Simply start typing your code in [script.py](/script.py), or open the new [editor](https://github.com/MCMi460/PyTAS/releases)!
+
 ## Syntax
 There are two native functions for inputs: `input()` and `wait()`. All inputs performed in `main()` will be used, so it's best to write your scripts in the `main()` function. Import the `script()` class to call these functions.  
 `input()` requires 6 positional arguments, FRAME, KEYS, STICK1_X, STICK1_Y, STICK2_X, and STICK2_Y.  

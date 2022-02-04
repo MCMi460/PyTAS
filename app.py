@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from layout.layout import Ui_MainWindow
-import core.main, sys, random, math, inspect, re
+import core.main, sys, os, random, math, inspect, re
 
 version = core.main.version
 keys = list(core.main.script().keys)
@@ -733,7 +733,7 @@ class GUI(Ui_MainWindow):
 
         notice.setText('Process Success!')
         notice.setWindowTitle('Process Success!')
-        notice.setDetailedText(f'File output written to \'{filename}\'')
+        notice.setDetailedText(f'File output written to \'{os.path.abspath("./output/" + output + ".txt")}\'')
         notice.exec_()
 
     def askSave(self):
