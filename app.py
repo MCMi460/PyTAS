@@ -249,6 +249,7 @@ class GUI(Ui_MainWindow):
                     functionBox.setCurrentText('main')
                     self.fill_table()
                     return
+                func = func.replace(' ','')
                 buffer = f"def {func}():\n   script.input(1,('NONE',),0,0,0,0)\n\n{buffer}"
                 functionBox.addItem(func)
                 functionBox.setCurrentText(func)
