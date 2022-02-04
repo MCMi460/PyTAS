@@ -1,6 +1,15 @@
+# MacOS Exclusives
 .DS_Store
+
+# Python Exclusives
 __pycache__/
 venv/
+
+# Qt Creator Exclusives
 *.autosave
+
+# PyInstaller and py2app Exclusives
 build/
 dist/
+app.spec
+setup.py

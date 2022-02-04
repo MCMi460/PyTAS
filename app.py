@@ -779,6 +779,14 @@ class GUI(Ui_MainWindow):
             return
         sys.exit("Closed app")
 
+def getPath(path):
+    try:
+        root = sys._MEIPASS
+    except Exception:
+        root = os.path.abspath('.')
+
+    return os.path.join(root, path)
+
 if __name__ == '__main__':
     filename = './script.py'
     output = 'script1'
@@ -787,7 +795,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     for theme in ('Fibers','SyNet','Toolery'):
-        file = QFile(f"./layout/themes/{theme}.qss")
+        file = QFile(getPath(f"layout/themes/{theme}.qss"))
         file.open(QFile.ReadOnly | QFile.Text)
         stream = QTextStream(file)
         themes.append({
