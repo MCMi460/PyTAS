@@ -264,6 +264,14 @@ QTreeView::branch:open:has-children:has-siblings
 
 }
 
+/*-----QTabWidget-----*/
+QTabBar::tab
+{
+	background-color: #1a1a1a;
+	color : #fff;
+	padding: 3px;
+	border: 1px solid #656565;
+}
 
 /*-----QTableView & QTableWidget-----*/
 QTableView
