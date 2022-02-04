@@ -214,7 +214,7 @@ class GUI(Ui_MainWindow):
                     functionBox.setCurrentText('main')
                     self.fill_table()
                     return
-                buffer = f"def {func}():\n   script.wait(1)\n\n{buffer}"
+                buffer = f"def {func}():\n   script.input(1,('NONE',),0,0,0,0)\n\n{buffer}"
                 functionBox.addItem(func)
                 functionBox.setCurrentText(func)
                 self.fill_table()
@@ -338,10 +338,6 @@ class GUI(Ui_MainWindow):
                         frames.append([True,l])
                         possible_frame += l['frames']
                         break
-        #for i in frames:
-            #print(i[0])
-            #for n in i[1]:
-                #print(f'   {n}: {i[1][n]}')
         # Reorganize frames list
         def ex(elem):
             return int(elem[1]['Frame'])
@@ -374,10 +370,7 @@ class GUI(Ui_MainWindow):
             for i in frames:
                 if not i[0]:
                     i = i[1]
-                    if i['Key'] != 'NONE' or i['LeftStick'] != '0;0' or i['RightStick'] != '0;0':
-                        text = f"{text}    script.input({i['Frame'] - lastframe},({','.join([ f'{char}{h}{char}' for h in i['Key'].split(';') ])},),{','.join(i['LeftStick'].split(';'))},{','.join(i['RightStick'].split(';'))})\n"
-                    else:
-                        text = f"{text}    script.wait({i['Frame'] - lastframe})\n"
+                    text = f"{text}    script.input({i['Frame'] - lastframe},({','.join([ f'{char}{h}{char}' for h in i['Key'].split(';') ])},),{','.join(i['LeftStick'].split(';'))},{','.join(i['RightStick'].split(';'))})\n"
                     lastframe = i['Frame']
                 else:
                     i = i[1]
@@ -389,15 +382,15 @@ class GUI(Ui_MainWindow):
                 fileEnvironment = self.setupFileEnv()[0]
                 fileEnvironment['script'].__init__()
                 f_vals = fileEnvironment['script'].run(fileEnvironment[func],output,True)
-                functions.append({
-                'name':func,
-                'data':f_vals,
-                'frames':f_vals[-1]['Frame'],
-                'length':len(f_vals),
-                })
-                list = [ i for i in functions if i['name'] == func ]
-                if len(list) > 1 or len(frames) == 0:
-                    functions.remove(list[0])
+                for i in functions:
+                    if i['name'] == func:
+                        i = {
+                        'name':func,
+                        'data':f_vals,
+                        'frames':f_vals[-1]['Frame'],
+                        'length':len(f_vals),
+                        }
+                        break
             else:
                 text = ''
                 buffer = buffer.replace(function,text)
@@ -417,10 +410,7 @@ class GUI(Ui_MainWindow):
                 if int(n['Frame']) <= lastframe:
                     continue
                 if n['Caller'] == i['name'] or n['Caller'] == 'wait':
-                    if n['Key'] != 'NONE' or n['LeftStick'] != '0;0' or n['RightStick'] != '0;0':
-                        text = f"{text}    script.input({int(n['Frame']) - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
-                    else:
-                        text = f"{text}    script.wait({int(n['Frame']) - lastframe})\n"
+                    text = f"{text}    script.input({int(n['Frame']) - lastframe},({','.join([ f'{char}{h}{char}' for h in n['Key'].split(';') ])},),{','.join(n['LeftStick'].split(';'))},{','.join(n['RightStick'].split(';'))})\n"
                     lastframe = int(n['Frame'])
                 else:
                     text = f"{text}    {n['Caller']}()\n"
@@ -503,30 +493,44 @@ class GUI(Ui_MainWindow):
         funcs = [ i['name'] for i in functions if i['name'] != functionBox.currentText() and functionBox.currentText() not in self.getSource(i['name']) ]
         if not len(funcs) > 0:
             return
+        if table.rowCount() > 1:
+            frame, response = QInputDialog.getInt(self.MainWindow, 'Insert Function', 'After which frame would you like to insert the function?',0,0,frames[-1][1]['Frame'])
+            if not response:
+                return
+            index = self.row_count
+            for i in range(1,table.rowCount()):
+                cell = table.cellWidget(i,0)
+                if isinstance(cell,QSpinBox):
+                    val = cell.value()
+                    if val > frame:
+                        index = i
+                        break
+        else:
+            index = 1
         # Add row
         self.row_count += 1
-        table.setRowCount(self.row_count)
+        table.insertRow(index)
 
         # Set frame
         item = QComboBox()
         item.clear()
         item.addItems(funcs)
         item.currentIndexChanged.connect(self.comboUpdate)
-        table.setCellWidget(self.row_count - 1, 0, item)
+        table.setCellWidget(index, 0, item)
 
         # Sticks
         h = 1
         for j in ['LeftStick','RightStick']:
             item = QTableWidgetItem()
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            table.setItem(self.row_count - 1, h, item)
+            table.setItem(index, h, item)
             h += 1
 
         # Set keys
         for j in range(len(keys)):
             item = QTableWidgetItem()
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            table.setItem(self.row_count - 1, j + 3, item)
+            table.setItem(index, j + 3, item)
 
         # Update table
         self.tableUpdate(0,0)
@@ -584,6 +588,10 @@ class GUI(Ui_MainWindow):
                 self.ySpin.setValue(y)
                 self.ySpin.valueChanged.connect(self.ySpinUpdate)
 
+                self.button = QPushButton(self.centralwidget)
+                self.button.setText("Done")
+                self.button.setGeometry(QRect(int(self.width / 2 - self.width / 1.5 / 2), int(self.center + self.radii * 1.2 + self.radii / 3), int(self.width / 1.5), int(self.height / 8)))
+
             def paintEvent(self, event):
                 self.centralwidget.painter = QPainter()
                 self.centralwidget.painter.begin(self.MainWindow)
@@ -633,15 +641,18 @@ class GUI(Ui_MainWindow):
         def closeEvent(event: QCloseEvent):
             stickControl.close()
             self.MainWindow.setEnabled(True)
+        def save():
             x = Ui_StickControl.x
             y = Ui_StickControl.y
             item = QTableWidgetItem()
             item.setText(f'{x};{y}')
             table.setItem(row, col, item)
             self.tableUpdate(0,0)
+            closeEvent('save')
         stickControl.closeEvent = closeEvent
         Ui_StickControl = Ui_StickControl()
         Ui_StickControl.setupUi(stickControl)
+        Ui_StickControl.button.clicked.connect(save)
         self.MainWindow.setEnabled(False)
         stickControl.show()
 
@@ -712,6 +723,10 @@ class GUI(Ui_MainWindow):
         notice.exec_()
 
     def askSave(self):
+        with open(filename,'r') as file:
+            lines = file.read()
+        if lines == buffer:
+            return True
         dlg = QMessageBox()
         dlg.setWindowTitle("Save file")
         dlg.setText("Would you like to save your current progress?")
