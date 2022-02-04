@@ -557,6 +557,9 @@ class GUI(Ui_MainWindow):
                     self.height = int(self.width * 1.5)
                 self.MainWindow.setFixedSize(self.width, self.height)
                 self.MainWindow.paintEvent = self.paintEvent
+                self.MainWindow.mousePressEvent = self.mousePressEvent
+                self.MainWindow.mouseReleaseEvent = self.mouseReleaseEvent
+                self.MainWindow.mouseMoveEvent = self.mouseMoveEvent
                 self.MainWindow.setAutoFillBackground(True)
 
                 self.centralwidget = QWidget(self.MainWindow)
@@ -564,6 +567,8 @@ class GUI(Ui_MainWindow):
 
                 self.x = x
                 self.y = y
+
+                self.mouseClick = False
 
                 self.xSpin = QSpinBox(self.centralwidget)
                 self.xSpin.setGeometry(QRect(int(self.radii / 2), self.center + int(self.radii * 1.2), int(self.radii / 1.5), int(self.radii / 4)))
@@ -593,18 +598,36 @@ class GUI(Ui_MainWindow):
                 self.centralwidget.painter.end()
 
             def xSpinUpdate(self):
-                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) < self.radii:
+                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) <= self.radii:
                     self.x = self.xSpin.value()
                 else:
                     self.xSpin.setValue(self.x)
                 self.MainWindow.update()
 
             def ySpinUpdate(self):
-                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) < self.radii:
+                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) <= self.radii:
                     self.y = self.ySpin.value()
                 else:
                     self.ySpin.setValue(self.y)
                 self.MainWindow.update()
+
+            def mousePressEvent(self, event):
+                self.mouseClick = True
+                self.mouseMoveEvent(event)
+
+            def mouseReleaseEvent(self, event):
+                self.mouseClick = False
+
+            def mouseMoveEvent(self, event):
+                if not self.mouseClick:
+                    return
+                posx = event.pos().x()
+                posy = event.pos().y()
+                if math.sqrt( (posx - self.center)**2 + (posy - self.center)**2 ) <= self.radii:
+                    self.x = int((posx - self.center) * 32767 / self.radii)
+                    self.y = int((posy - self.center) * 32767 / self.radii)
+                    self.xSpin.setValue(self.x)
+                    self.ySpin.setValue(self.y)
         global stickControl
         stickControl = QWidget()
         def closeEvent(event: QCloseEvent):
