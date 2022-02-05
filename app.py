@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from layout.layout import Ui_MainWindow
-import core.main, sys, os, random, math, inspect, re
+import core.main, core.convert, sys, os, random, math, inspect, re
 
 version = core.main.version
 keys = list(core.main.script().keys)
@@ -750,7 +750,7 @@ class GUI(Ui_MainWindow):
     def openFile(self):
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
-        dlg.setNameFilters(["Python files (*.py)",])
+        dlg.setNameFilters(["Python files (*.py)",'Text files (*.txt)'])
         dlg.selectNameFilter("Python files (*.py)")
 
         if dlg.exec_() == QDialog.Accepted:
@@ -759,8 +759,12 @@ class GUI(Ui_MainWindow):
         else:
             return False
         # Buffer
-        with open(filename,'r') as file:
-            buffer = file.read()
+        if filename.endswith('.txt'):
+            buffer = core.convert.convert().convertFromFile(filename)
+            buffer = buffer + '\n\nfrom core.main import script\nscript = script()\nscript.run(main)\n'
+        else:
+            with open(filename,'r') as file:
+                buffer = file.read()
         # A commonly-recurring function that pulls data from the buffer and writes it to the table
         self.fill_table('True')
 
