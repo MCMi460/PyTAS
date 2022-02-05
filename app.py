@@ -245,11 +245,11 @@ class GUI(Ui_MainWindow):
         if func != 'main':
             if func == 'Create New Function':
                 func, response = QInputDialog.getText(self.MainWindow, 'Function Name', 'Enter the function name:')
-                if not response or not func:
+                func = func.replace(' ','')
+                if not response or not func or not func.isalpha():
                     functionBox.setCurrentText('main')
                     self.fill_table()
                     return
-                func = func.replace(' ','')
                 buffer = f"def {func}():\n   script.input(1,('NONE',),0,0,0,0)\n\n{buffer}"
                 functionBox.addItem(func)
                 functionBox.setCurrentText(func)
