@@ -793,8 +793,13 @@ class GUI(Ui_MainWindow):
         ans = dlg.exec()
         if ans == QMessageBox.Yes:
             # Save file
-            with open(filename,'w') as file:
-                file.write(buffer)
+            if filename.endswith('.txt'):
+                fileEnvironment = self.setupFileEnv()[0]
+                with open(filename,'w') as file:
+                    file.write(core.main.script().justify(fileEnvironment['script'].run(fileEnvironment['main'],output,True)))
+            else:
+                with open(filename,'w') as file:
+                    file.write(buffer)
             return True
         elif ans == QMessageBox.No:
             return False
