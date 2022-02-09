@@ -52,7 +52,7 @@ class nxTAS():
             raise Exception('Invalid nxTAS file!')
         return text
 
-    def justify(self,inputs:list):
+    def justify(self,inputs:list=[]):
         if not inputs:
             inputs = self.input_arr
         text = ''
