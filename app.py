@@ -69,6 +69,8 @@ class GUI(Ui_MainWindow):
         self.setup_window()
         self.create_menu()
 
+        self.getTheme()
+
         # Open file
         while not self.openFile():
             pass
@@ -768,6 +770,16 @@ class GUI(Ui_MainWindow):
         table.removeRow(row)
         self.row_count -= 1
 
+    def getTheme(self):
+        with open('./options.txt','r') as file:
+            data = file.read().split('\n')
+            try:self.MainWindow.setStyleSheet(next(theme for theme in themes if theme['name'] == data[0])['data'])
+            except:print('Invalid options.txt')
+
+    def writeTheme(self,theme:str='Default'):
+        with open('./options.txt','w') as file:
+            file.write(theme)
+
     # Event-based functions
     def textUpdate(self):
         global buffer
@@ -799,6 +811,7 @@ class GUI(Ui_MainWindow):
         item, response = QInputDialog.getItem(self.MainWindow, "Select Theme", "Which theme would you like to use?", [ theme['name'] for theme in themes ], 0, False)
         if response and item:
             self.MainWindow.setStyleSheet(next(theme for theme in themes if theme['name'] == item)['data'])
+            self.writeTheme(item)
         else:
             return
 
@@ -891,6 +904,9 @@ if __name__ == '__main__':
     if not os.path.isfile(filename):
         with open(filename,'w') as file:
             file.write(default)
+    if not os.path.isfile('./options.txt'):
+        with open('./options.txt','w') as file:
+            file.write('Default')
 
     app = QApplication(sys.argv)
 

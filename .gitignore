@@ -12,6 +12,9 @@ venv/
 test/
 test.*
 
+# PyTAS
+options.txt
+
 # PyInstaller and py2app Exclusives
 build/
 dist/
