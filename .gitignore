@@ -8,6 +8,10 @@ venv/
 # Qt Creator Exclusives
 *.autosave
 
+# Testing utilities
+test/
+test.*
+
 # PyInstaller and py2app Exclusives
 build/
 dist/

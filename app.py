@@ -636,9 +636,23 @@ class GUI(Ui_MainWindow):
                 self.ySpin.setValue(y)
                 self.ySpin.valueChanged.connect(self.ySpinUpdate)
 
+                self.angSpin = QSpinBox(self.centralwidget)
+                self.angSpin.setGeometry(QRect(int(self.radii / 2), self.center + int(self.radii * 1.2 + self.radii / 4), int(self.radii / 1.5), int(self.radii / 4)))
+                self.angSpin.setMinimum(0)
+                self.angSpin.setMaximum(359)
+                self.angSpin.setValue(core.convert.makeStickPolar(self.x,self.y)[0])
+                self.angSpin.valueChanged.connect(self.angSpinUpdate)
+
+                self.magSpin = QSpinBox(self.centralwidget)
+                self.magSpin.setGeometry(QRect(int(self.radii * (4/3)), self.center + int(self.radii * 1.2 + self.radii / 4), int(self.radii / 1.5), int(self.radii / 4)))
+                self.magSpin.setMinimum(0)
+                self.magSpin.setMaximum(32767)
+                self.magSpin.setValue(core.convert.makeStickPolar(self.x,self.y)[1])
+                self.magSpin.valueChanged.connect(self.magSpinUpdate)
+
                 self.button = QPushButton(self.centralwidget)
                 self.button.setText("Done")
-                self.button.setGeometry(QRect(int(self.width / 2 - self.width / 1.5 / 2), int(self.center + self.radii * 1.2 + self.radii / 3), int(self.width / 1.5), int(self.height / 8)))
+                self.button.setGeometry(QRect(int(self.width / 2 - self.width / 1.5 / 2), self.height - int(self.height / 7), int(self.width / 1.5), int(self.height / 8)))
 
             def paintEvent(self, event):
                 self.centralwidget.painter = QPainter()
@@ -650,21 +664,57 @@ class GUI(Ui_MainWindow):
                 self.centralwidget.painter.drawLine(self.center,self.center - self.radii,self.center,self.center + self.radii)
                 self.centralwidget.painter.setPen(QPen(QColor(255,0,0), 1, Qt.SolidLine))
                 self.centralwidget.painter.setBrush(QColor(255, 0, 0))
-                self.centralwidget.painter.drawEllipse(QPoint(int(self.center + (self.x * self.radii / 32767)),int(self.center + (self.y * self.radii / 32767))), 5, 5)
+                self.centralwidget.painter.drawEllipse(QPoint(int(self.center + (self.x * self.radii / 32767)),int(self.center + (self.y * -1 * self.radii / 32767))), 5, 5)
                 self.centralwidget.painter.end()
 
             def xSpinUpdate(self):
-                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) <= self.radii:
+                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * -1 * self.radii / 32767)) - self.center)**2 ) <= self.radii:
                     self.x = self.xSpin.value()
+                    ang,mag = core.convert.makeStickPolar(self.x,self.y)
+                    self.blockSignals(True)
+                    self.angSpin.setValue(ang)
+                    self.magSpin.setValue(mag)
+                    self.blockSignals(False)
                 else:
                     self.xSpin.setValue(self.x)
                 self.MainWindow.update()
 
             def ySpinUpdate(self):
-                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * self.radii / 32767)) - self.center)**2 ) <= self.radii:
+                if math.sqrt( (int(self.center + (self.xSpin.value() * self.radii / 32767)) - self.center)**2 + (int(self.center + (self.ySpin.value() * -1 * self.radii / 32767)) - self.center)**2 ) <= self.radii:
                     self.y = self.ySpin.value()
+                    ang,mag = core.convert.makeStickPolar(self.x,self.y)
+                    self.blockSignals(True)
+                    self.angSpin.setValue(ang)
+                    self.magSpin.setValue(mag)
+                    self.blockSignals(False)
                 else:
                     self.ySpin.setValue(self.y)
+                self.MainWindow.update()
+
+            def angSpinUpdate(self):
+                x,y = core.convert.makeStickCartesian(self.angSpin.value(),self.magSpin.value())
+                if math.sqrt( (int(self.center + (x * self.radii / 32767)) - self.center)**2 + (int(self.center + (y * -1 * self.radii / 32767)) - self.center)**2 ) <= self.radii:
+                    self.x = x
+                    self.y = y
+                    self.blockSignals(True)
+                    self.xSpin.setValue(self.x)
+                    self.ySpin.setValue(self.y)
+                    self.blockSignals(False)
+                else:
+                    self.angSpin.setValue(core.convert.makeStickPolar(self.x,self.y)[0])
+                self.MainWindow.update()
+
+            def magSpinUpdate(self):
+                x,y = core.convert.makeStickCartesian(self.angSpin.value(),self.magSpin.value())
+                if math.sqrt( (int(self.center + (x * self.radii / 32767)) - self.center)**2 + (int(self.center + (y * -1 * self.radii / 32767)) - self.center)**2 ) <= self.radii:
+                    self.x = x
+                    self.y = y
+                    self.blockSignals(True)
+                    self.xSpin.setValue(self.x)
+                    self.ySpin.setValue(self.y)
+                    self.blockSignals(False)
+                else:
+                    self.angSpin.setValue(core.convert.makeStickPolar(self.x,self.y)[1])
                 self.MainWindow.update()
 
             def mousePressEvent(self, event):
@@ -674,6 +724,12 @@ class GUI(Ui_MainWindow):
             def mouseReleaseEvent(self, event):
                 self.mouseClick = False
 
+            def blockSignals(self,toggle:bool):
+                self.xSpin.blockSignals(toggle)
+                self.ySpin.blockSignals(toggle)
+                self.angSpin.blockSignals(toggle)
+                self.magSpin.blockSignals(toggle)
+
             def mouseMoveEvent(self, event):
                 if not self.mouseClick:
                     return
@@ -681,9 +737,13 @@ class GUI(Ui_MainWindow):
                 posy = event.pos().y()
                 if math.sqrt( (posx - self.center)**2 + (posy - self.center)**2 ) <= self.radii:
                     self.x = int((posx - self.center) * 32767 / self.radii)
-                    self.y = int((posy - self.center) * 32767 / self.radii)
+                    self.y = int((posy - self.center) * 32767 / self.radii) * -1
                     self.xSpin.setValue(self.x)
                     self.ySpin.setValue(self.y)
+                    self.blockSignals(True)
+                    self.angSpin.setValue(core.convert.makeStickPolar(self.x,self.y)[0])
+                    self.magSpin.setValue(core.convert.makeStickPolar(self.x,self.y)[1])
+                    self.blockSignals(False)
         global stickControl
         stickControl = QWidget()
         def closeEvent(event: QCloseEvent):
@@ -750,8 +810,8 @@ class GUI(Ui_MainWindow):
     def openFile(self):
         dlg = QFileDialog()
         dlg.setFileMode(QFileDialog.ExistingFiles)
-        dlg.setNameFilters(["Python files (*.py)",'Text files (*.txt)'])
-        dlg.selectNameFilter("Python files (*.py)")
+        dlg.setNameFilters(["PyTAS Script files (*.py)",'nx-TAS files (*.txt)','tiger.lua files (*.lua)'])
+        dlg.selectNameFilter("PyTAS Script files (*.py)")
 
         if dlg.exec_() == QDialog.Accepted:
             global buffer, filename
@@ -759,8 +819,8 @@ class GUI(Ui_MainWindow):
         else:
             return False
         # Buffer
-        if filename.endswith('.txt'):
-            buffer = core.convert.convert().convertFromFile(filename)
+        if filename.endswith('.txt') or filename.endswith('.lua'):
+            buffer = core.convert.convertFromFile(filename)
             buffer = buffer + '\n\nfrom core.main import script\nscript = script()\nscript.run(main)\n'
         else:
             with open(filename,'r') as file:
@@ -793,10 +853,14 @@ class GUI(Ui_MainWindow):
         ans = dlg.exec()
         if ans == QMessageBox.Yes:
             # Save file
+            fileEnvironment = self.setupFileEnv()[0]
+            inputs = fileEnvironment['script'].run(fileEnvironment['main'],output,True)
             if filename.endswith('.txt'):
-                fileEnvironment = self.setupFileEnv()[0]
                 with open(filename,'w') as file:
-                    file.write(core.main.script().justify(fileEnvironment['script'].run(fileEnvironment['main'],output,True)))
+                    file.write(core.convert.nxTAS(inputs).justify())
+            elif filename.endswith('.lua'):
+                with open(filename,'w') as file:
+                    file.write(core.convert.tigerlua(inputs).justify())
             else:
                 with open(filename,'w') as file:
                     file.write(buffer)

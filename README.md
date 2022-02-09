@@ -73,4 +73,5 @@ script.run(main)
 ```
 
 ## Suggestions
-Any features I missed or something you'd like to see in the future? Ping me on the [Super Mario Odyssey TAS](https://discord.gg/atKSg9fygq) Discord server. I'm Delta#4444.
+Any features I missed or something you'd like to see in the future? Ping me on the [Super Mario Odyssey TAS](https://discord.gg/atKSg9fygq) Discord server. I'm Delta#4444.  
+Please feel free to submit a bug report. I'm still working on a lot of features, and it really helps to know what's on the agenda to fix.
