@@ -72,7 +72,8 @@ class tigerlua():
         try:
             if not inputs:
                 raise Exception()
-            inputs.remove('')
+            try:inputs.remove('')
+            except:pass
             pressedIndex = []
             frames = []
             inputs[0] = inputs[0].replace('+','1')
