@@ -10,9 +10,9 @@ def roll_cancel():
 
 def spin():
     for i in range(11):
-        script.input(1,('NONE',),0,32767,0,0)
-        script.input(1,('NONE',),-28377,-16383,0,0)
-        script.input(1,('NONE',),28377,-16383,0,0)
+        script.input(1,(),0,32767,0,0)
+        script.input(1,(),-28377,-16383,0,0)
+        script.input(1,(),28377,-16383,0,0)
 
 # Put your inputs here!
 def main():

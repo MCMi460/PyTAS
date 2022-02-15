@@ -1,5 +1,8 @@
+if __name__ == '__main__':
+    raise Exception('File ran as main. Please import this module into a script instead.')
 import os
 import inspect
+from .convert import nxTAS
 
 version = 0.4
 
@@ -79,12 +82,6 @@ class script():
         'Caller':'wait',
         })
 
-    def justify(self,inputs:list):
-        text = ''
-        for i in inputs:
-            text = f"{text}{i['Frame']} {i['Key']} {i['LeftStick']} {i['RightStick']}\n"
-        return text
-
     def run(self,MAIN,FILENAME:str='script1',RE:bool=False):
         if self.timer:
             self.timer.start()
@@ -96,12 +93,9 @@ class script():
             if RE:
                 return self.input_arr
             with open(f'{self.path}/{FILENAME}.txt','w') as file:
-                file.write(self.justify(self.input_arr))
+                file.write(nxTAS(self.input_arr).justify())
         except Exception as e:
             print('A fatal error occurred. Please review the error message.')
             print(e)
         if self.timer:
             print(f'Finished time in {self.timer.get()} seconds.')
-
-if __name__ == "__main__":
-    raise Exception('File ran as main. Please import this module into a script instead.')

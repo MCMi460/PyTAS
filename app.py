@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from layout.layout import Ui_MainWindow
-import core.main, core.convert, sys, os, random, math, inspect, re
+import core.main, core.convert, core.ftp, sys, os, random, math, inspect, re, pickle
 
 version = core.main.version
 keys = list(core.main.script().keys)
@@ -24,6 +24,14 @@ themes = [{
     'name':'Default',
     'data':'',
 },]
+options = {
+    'theme':'Default',
+    'path':'./output',
+    'output':'script1',
+    'ftp':False,
+    'ipaddr':'127.0.0.1',
+    'port':5000,
+}
 # -PyTAS stuff
 frames = []
 functions = []
@@ -169,6 +177,11 @@ class GUI(Ui_MainWindow):
         runFile.triggered.connect(self.runFile)
         fileMenu.addAction(runFile)
 
+        settings = QAction('&Settings', self.MainWindow)
+        settings.setShortcut('Ctrl+,')
+        settings.triggered.connect(self.settings)
+        fileMenu.addAction(settings)
+
         exit = QAction('&Quit', self.MainWindow)
         exit.setShortcut('Ctrl+Q')
         exit.triggered.connect(self.exit)
@@ -204,11 +217,13 @@ class GUI(Ui_MainWindow):
         for line in buff.split('\n'):
             if '.run(' in line:
                 buff = buff.replace(line,'')
-        buff = f'{buff}\n'
-        'from core.main import script\nscript = script()'
+        buff = f'{buff}\n' + f'from core.main import script\nscript = script(\'{options["path"]}\')'
         fileEnvironment = {}
         exec(buff, fileEnvironment, None)
         return fileEnvironment, buff
+
+    def setupFTP(self):
+        return core.ftp.Switch(options['ipaddr'],options['port'])
 
     def fill_text(self):
         textEdit.textChanged.connect(self.textUpdate)
@@ -222,14 +237,14 @@ class GUI(Ui_MainWindow):
         elif buffer.count('main()') > 1:
             raise Exception('Cannot read, infinite recursion')
         fileEnvironment, buff = self.setupFileEnv()
-        vals = fileEnvironment['script'].run(fileEnvironment['main'],output,True)
+        vals = fileEnvironment['script'].run(fileEnvironment['main'],options['output'],True)
         # Begin interpreting functions
         functions = []
         for i in fileEnvironment:
             if i in ('__builtins__','script','main'):
                 continue
             fileEnvironment['script'].__init__()
-            f_vals = fileEnvironment['script'].run(fileEnvironment[i],output,True)
+            f_vals = fileEnvironment['script'].run(fileEnvironment[i],options['output'],True)
             if not f_vals:
                 continue
             functions.append({
@@ -421,7 +436,7 @@ class GUI(Ui_MainWindow):
                 buffer = buffer.replace(function,text)
                 fileEnvironment = self.setupFileEnv()[0]
                 fileEnvironment['script'].__init__()
-                f_vals = fileEnvironment['script'].run(fileEnvironment[func],output,True)
+                f_vals = fileEnvironment['script'].run(fileEnvironment[func],options['output'],True)
                 for i in functions:
                     if i['name'] == func:
                         i = {
@@ -771,16 +786,18 @@ class GUI(Ui_MainWindow):
         self.row_count -= 1
 
     def getTheme(self):
-        with open('./options.txt','r') as file:
-            data = file.read().split('\n')
-            try:self.MainWindow.setStyleSheet(next(theme for theme in themes if theme['name'] == data[0])['data'])
-            except:print('Invalid options.txt')
+        self.MainWindow.setStyleSheet(next(theme for theme in themes if theme['name'] == options['theme'])['data'])
 
     def writeTheme(self,theme:str='Default'):
-        with open('./options.txt','w') as file:
-            file.write(theme)
+        global options
+        options['theme'] = theme
+        self.optionsUpdate()
 
     # Event-based functions
+    def optionsUpdate(self):
+        with open('./options.txt','wb') as file:
+            pickle.dump(options, file)
+
     def textUpdate(self):
         global buffer
         buffer = textEdit.toPlainText()
@@ -846,13 +863,90 @@ class GUI(Ui_MainWindow):
         return True
 
     def runFile(self):
-        exec(buffer, globals(), None)
+        fileEnvironment = self.setupFileEnv()[0]
+        fileEnvironment['script'].run(fileEnvironment['main'],options['output'],False)
+        text = 'Process Success!'
+        if options['ftp']:
+            fileEnvironment['script'].__init__()
+            data = core.convert.nxTAS(fileEnvironment['script'].run(fileEnvironment['main'],options['output'],True)).justify()
+            try:
+                switch = self.setupFTP()
+                switch.uploadFile(options['output'] + '.txt',data)
+                text = text + f'\nFTP saved file as \'scripts/{options["output"] + ".txt"}\''
+            except:
+                text = text + f'\nFTP could not connect to {options["ipaddr"]}:{options["port"]}'
         notice = QMessageBox()
 
-        notice.setText('Process Success!')
+        notice.setText(text)
         notice.setWindowTitle('Process Success!')
-        notice.setDetailedText(f'File output written to \'{os.path.abspath("./output/" + output + ".txt")}\'')
+        notice.setDetailedText(f'File output written to \'{os.path.abspath(options["path"] + "/" + options["output"] + ".txt")}\'')
         notice.exec_()
+
+    def settings(self):
+        global options
+        class Ui_Settings(object):
+            def setupUi(self, MainWindow):
+                self.MainWindow = MainWindow
+                self.MainWindow.setWindowTitle('Settings')
+                self.MainWindow.setStyleSheet('')
+                self.width = int(width / 4)
+                self.height = self.width
+                self.MainWindow.setFixedSize(self.width, self.height)
+
+                self.centralwidget = QWidget(self.MainWindow)
+                self.centralwidget.setObjectName("centralwidget")
+
+                self.filePicker = QPushButton(self.centralwidget)
+                self.filePicker.setGeometry(QRect(int(self.width / 2), int(self.height / 10), int(self.width / 3.5), int(self.width / 12)))
+                self.filePicker.setText('Open file picker')
+                self.filePicker.clicked.connect(lambda:self.openFileExplorer())
+                self.fileLabel = QLabel(self.centralwidget)
+                self.fileLabel.setGeometry(QRect(int(self.width / 5), int(self.height / 10), int(self.width / 3.5), int(self.width / 12)))
+                self.fileLabel.setText('Directory:')
+                self.checkBox = QCheckBox(self.centralwidget)
+                self.checkBox.setGeometry(QRect(int(self.width / 10), int(self.height / 3), int(self.width / 3.5), int(self.width / 12)))
+                self.checkBox.setText('Switch FTP')
+                self.checkBox.setCheckState(options['ftp'])
+                self.checkBox.setTristate(False)
+                self.checkBox.stateChanged.connect(lambda:self.toggle())
+                self.lineEdit = QLineEdit(self.centralwidget)
+                self.lineEdit.setGeometry(QRect(int(self.width * .5), int(self.height * .35), 100, 25))
+                self.lineEdit.setText(options['ipaddr'])
+                self.lineEdit.textChanged.connect(lambda:self.IPupdate())
+                self.spinBox = QSpinBox(self.centralwidget)
+                self.spinBox.setGeometry(QRect(int(self.width * .5 + 110), int(self.height * .35), 60, 25))
+                self.spinBox.setMinimum(1024)
+                self.spinBox.setMaximum(9999)
+                self.spinBox.setValue(options['port'])
+                self.spinBox.valueChanged.connect(lambda:self.portUpdate())
+
+                self.toggle()
+            def IPupdate(self):
+                text = self.lineEdit.text()
+                try:int(text.replace('.',''))
+                except:return
+                if not 3 <= text.count('.') < 5:return
+                options['ipaddr'] = text
+            def portUpdate(self):
+                options['port'] = self.spinBox.value()
+            def openFileExplorer(self):
+                options['path'] = QFileDialog.getExistingDirectory(self.MainWindow, "Select Directory")
+            def toggle(self):
+                state = bool(self.checkBox.checkState())
+                options['ftp'] = state
+                self.lineEdit.setEnabled(state)
+                self.spinBox.setEnabled(state)
+        global settings
+        settings = QWidget()
+        def closeEvent(event: QCloseEvent):
+            settings.close()
+            self.MainWindow.setEnabled(True)
+            self.optionsUpdate()
+        settings.closeEvent = closeEvent
+        Ui_Settings = Ui_Settings()
+        Ui_Settings.setupUi(settings)
+        self.MainWindow.setEnabled(False)
+        settings.show()
 
     def askSave(self):
         with open(filename,'r') as file:
@@ -867,7 +961,7 @@ class GUI(Ui_MainWindow):
         if ans == QMessageBox.Yes:
             # Save file
             fileEnvironment = self.setupFileEnv()[0]
-            inputs = fileEnvironment['script'].run(fileEnvironment['main'],output,True)
+            inputs = fileEnvironment['script'].run(fileEnvironment['main'],options['output'],True)
             if filename.endswith('.txt'):
                 with open(filename,'w') as file:
                     file.write(core.convert.nxTAS(inputs).justify())
@@ -898,15 +992,17 @@ def getPath(path):
 
 if __name__ == '__main__':
     filename = './script.py'
-    output = 'script1'
     buffer = None
 
     if not os.path.isfile(filename):
         with open(filename,'w') as file:
             file.write(default)
     if not os.path.isfile('./options.txt'):
-        with open('./options.txt','w') as file:
-            file.write('Default')
+        with open('./options.txt','wb') as file:
+            pickle.dump(options, file)
+    else:
+        with open('./options.txt','rb') as file:
+            options = pickle.load(file)
 
     app = QApplication(sys.argv)
 
