@@ -865,16 +865,17 @@ class GUI(Ui_MainWindow):
     def runFile(self):
         fileEnvironment = self.setupFileEnv()[0]
         fileEnvironment['script'].run(fileEnvironment['main'],options['output'],False)
-        text = 'Process Success!'
         if options['ftp']:
             fileEnvironment['script'].__init__()
             data = core.convert.nxTAS(fileEnvironment['script'].run(fileEnvironment['main'],options['output'],True)).justify()
             try:
                 switch = self.setupFTP()
                 switch.uploadFile(options['output'] + '.txt',data)
-                text = text + f'\nFTP saved file as \'scripts/{options["output"] + ".txt"}\''
+                text = f'Process Success!\nFTP saved file as \'scripts/{options["output"] + ".txt"}\''
             except:
-                text = text + f'\nFTP could not connect to {options["ipaddr"]}:{options["port"]}'
+                text = f'FTP could not connect to {options["ipaddr"]}:{options["port"]}'
+        else:
+            text = 'Process Success!'
         notice = QMessageBox()
 
         notice.setText(text)
@@ -900,9 +901,15 @@ class GUI(Ui_MainWindow):
                 self.filePicker.setGeometry(QRect(int(self.width / 2), int(self.height / 10), int(self.width / 3.5), int(self.width / 12)))
                 self.filePicker.setText('Open file picker')
                 self.filePicker.clicked.connect(lambda:self.openFileExplorer())
+                self.themePicker = QPushButton(self.centralwidget)
+                self.themePicker.setGeometry(QRect(int(self.width / 2), int(self.height / 10 + self.width / 12), int(self.width / 3.5), int(self.width / 12)))
+                self.themePicker.setText('Choose theme')
                 self.fileLabel = QLabel(self.centralwidget)
                 self.fileLabel.setGeometry(QRect(int(self.width / 5), int(self.height / 10), int(self.width / 3.5), int(self.width / 12)))
                 self.fileLabel.setText('Directory:')
+                self.themeLabel = QLabel(self.centralwidget)
+                self.themeLabel.setGeometry(QRect(int(self.width / 5), int(self.height / 10 + self.width / 12), int(self.width / 3.5), int(self.width / 12)))
+                self.themeLabel.setText('Theme:')
                 self.checkBox = QCheckBox(self.centralwidget)
                 self.checkBox.setGeometry(QRect(int(self.width / 10), int(self.height / 3), int(self.width / 3.5), int(self.width / 12)))
                 self.checkBox.setText('Switch FTP')
@@ -945,6 +952,7 @@ class GUI(Ui_MainWindow):
         settings.closeEvent = closeEvent
         Ui_Settings = Ui_Settings()
         Ui_Settings.setupUi(settings)
+        Ui_Settings.themePicker.clicked.connect(self.themeUpdate)
         self.MainWindow.setEnabled(False)
         settings.show()
 

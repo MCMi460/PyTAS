@@ -4,7 +4,7 @@ from ftplib import FTP
 class Switch():
     def __init__(self,ipaddr:str='127.0.0.1',port:int=5000,path:str='scripts'):
         self.switch = FTP()
-        self.switch.connect(ipaddr,port)
+        self.switch.connect(ipaddr,port,timeout=5)
         self.switch.login(user='PyTAS Editor',passwd='Password')
         self.switch.cwd(path)
 
