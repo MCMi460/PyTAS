@@ -35,6 +35,11 @@ options = {
 # -PyTAS stuff
 frames = []
 functions = []
+pasteboard = {
+'Key':'NONE',
+'LeftStick':'0;0',
+'RightStick':'0;0',
+}
 
 default = """def roll_cancel():
     script.input(1,('KEY_B',),0,0,0,0)
@@ -192,6 +197,16 @@ class GUI(Ui_MainWindow):
         newFrame.setShortcut('Ctrl+N')
         newFrame.triggered.connect(self.add_Frame)
         editMenu.addAction(newFrame)
+
+        copyFrame = QAction('&Copy', self.MainWindow)
+        copyFrame.setShortcut('Ctrl+C')
+        copyFrame.triggered.connect(self.copy)
+        editMenu.addAction(copyFrame)
+
+        pasteFrame = QAction('&Paste', self.MainWindow)
+        pasteFrame.setShortcut('Ctrl+V')
+        pasteFrame.triggered.connect(self.paste)
+        editMenu.addAction(pasteFrame)
 
         # View menu
         newTheme = QAction('&Change Theme', self.MainWindow)
@@ -797,6 +812,88 @@ class GUI(Ui_MainWindow):
     def optionsUpdate(self):
         with open('./options.txt','wb') as file:
             pickle.dump(options, file)
+
+    def copy(self):
+        global pasteboard
+        rows = table.selectedIndexes()
+        if not len(rows) > 0:
+            pasteboard = {
+            'Key':'NONE',
+            'LeftStick':'0;0',
+            'RightStick':'0;0',
+            }
+        else:
+            i = rows[0].row()
+            val = table.cellWidget(i,0)
+            if isinstance(val,QSpinBox):
+                list = []
+                for n in range(3,len(keys) + 3):
+                    if table.item(i,n).checkState() == Qt.Checked:
+                        list.append(keys[n-3])
+                key = ''
+                for n in range(len(list)):
+                    if n > 0:
+                        key = f'{key};'
+                    key = f'{key}{list[n]}'
+                if key == '':
+                    key = 'NONE'
+                lstick = table.item(i,1)
+                rstick = table.item(i,2)
+                pasteboard = {
+                'Key':f'{key}',
+                'LeftStick':f'{lstick.text()}',
+                'RightStick':f'{rstick.text()}',
+                }
+        print(pasteboard)
+
+    def paste(self):
+        if table.rowCount() > 1:
+            frame, response = QInputDialog.getInt(self.MainWindow, 'Paste Frame', 'After which frame would you like to paste your frame?',0,0,frames[-1][1]['Frame'])
+            if not response:
+                return
+            index = self.row_count
+            for i in range(1,table.rowCount()):
+                cell = table.cellWidget(i,0)
+                if isinstance(cell,QSpinBox):
+                    val = cell.value()
+                    if val > frame:
+                        index = i
+                        break
+        else:
+            index = 1
+            frame = 1
+        # Add row
+        self.row_count += 1
+        table.insertRow(index)
+
+        # Set frame
+        item = QSpinBox()
+        item.setMinimum(0)
+        item.setMaximum(999999)
+        item.setValue(frame)
+        item.valueChanged.connect(self.spinUpdate)
+        table.setCellWidget(index, 0, item)
+
+        # Sticks
+        h = 1
+        for j in ['LeftStick','RightStick']:
+            item = QTableWidgetItem()
+            item.setText(pasteboard[j])
+            table.setItem(index, h, item)
+            h += 1
+
+        # Set keys
+        for j in range(len(keys)):
+            item = QTableWidgetItem()
+            item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            if keys[j] in pasteboard['Key']:
+                item.setCheckState(Qt.Checked)
+            else:
+                item.setCheckState(Qt.Unchecked)
+            table.setItem(index, j + 3, item)
+
+        # Update table
+        self.tableUpdate(0,0)
 
     def textUpdate(self):
         global buffer
